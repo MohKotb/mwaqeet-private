@@ -1,0 +1,54 @@
+CACHE MANIFEST
+# version 29.04.26
+
+CACHE:
+index.html
+style.css
+script.js
+image/horn_on.png
+image/horn_off.png
+image/v-2.jpg
+image/bg1.jpg
+image/bg2.jpg
+image/bg3.jpg
+image/bg4.jpg
+image/bg5.jpg
+image/bg6.jpg
+image/bg7.jpg
+image/athkar.jpg
+image/fasting_monday.jpg
+image/fasting_thursday.jpg
+image/fasting_white_days.jpg
+data/CAIRO2.js
+data/CAIRO.js
+data/ALEX.js
+data/ALFAYYUM.js
+data/Shibin_alkom.js
+data/TANTA.js 
+data/ARISH.js 
+data/ALMANSURAH.js 
+data/ALMINYA.js 
+data/ASSUIT.js 
+data/BANHA.js 
+data/BANISUWAYF.js 
+data/DAMANHUR.js 
+data/DAMIETTA.js 
+data/DIKIRNIS.js 
+data/GIZA.js 
+data/HURGHADA.js 
+data/ISMAILIA.js 
+data/KAFRADDAWWAR.js 
+data/KAFRASHSHAYKH.js 
+data/LUXOR.js 
+data/MERSAMATRUH.js 
+data/PORT-SAID.js 
+data/QINA.js 
+data/SHARMELSHEIKH.js 
+data/SOHAG.js 
+data/SUEZ.js 
+data/ZAGAZIG.js 
+data/ZAGAZIG2.js  
+# ... أضف أي ملف آخر (مثل باقي المحافظات)
+
+NETWORK:
+# اتركه فارغاً أو ضع * للسماح بالاتصال إذا احتجت
