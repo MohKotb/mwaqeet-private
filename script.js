@@ -3073,21 +3073,36 @@ function checkRemoteUpdate() {
 // تشغيل الفحص كل 10 ثوانٍ
 //setInterval(checkRemoteUpdate, 10000);
 ///////////////////////////////////////////////////////////////
-// ========== زر تحديث الساعة (نسخة محسّنة) ==========
+// ========== نظام التحديث عبر AppCache ==========
+// تمت إزالة أي كود قديم متعلق بـ checkForUpdates
 if ($('updateBtn')) {
     $('updateBtn').onclick = function() {
-        // نعرض تنبيه بداية التحديث فوراً
-        alert('سيتم تحميل 3 ملفات تحديث. بعد اكتمال التحميل، انقلها من مجلد التنزيلات إلى مجلد mwaqeet وأعد تشغيل التطبيق.');
-        
-        // قائمة الملفات المطلوبة
-        var files = ['index.html', 'script.js', 'style.css'];
-        var base = 'https://mohkotb.github.io/mwaqeet-private/';
-        
-        for (var i = 0; i < files.length; i++) {
-            // نستخدم window.open لفتح الملف مباشرة مما يجبر المتصفح على التحميل
-            window.open(base + files[i], '_blank');
+        if (!navigator.onLine) {
+            alert('يرجى توصيل نقطة اتصال الموبايل أولاً.');
+            return;
+        }
+        setStatus('جاري التحقق من التحديث...');
+        try {
+            window.applicationCache.update();
+        } catch(e) {
+            setStatus('المتصفح لا يدعم التحديث التلقائي');
         }
     };
 }
+
+window.applicationCache.addEventListener('updateready', function() {
+    if (window.applicationCache.status === window.applicationCache.UPDATEREADY) {
+        alert('تم تحميل النسخة الجديدة، سيتم إعادة التشغيل.');
+        window.location.reload();
+    }
+});
+
+window.applicationCache.addEventListener('noupdate', function() {
+    setStatus('نسختك هي الأحدث');
+});
+
+window.applicationCache.addEventListener('error', function() {
+    setStatus('فشل التحديث، تأكد من الاتصال');
+});
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
