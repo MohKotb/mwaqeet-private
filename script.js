@@ -1129,9 +1129,9 @@ function updateHeaderAudioIcon() {
   var v = new Date().getTime(); // عشان يمسح الكاش ويحدث الصورة فوراً
 
   if (isAdhanMuted === true || String(isAdhanMuted) === "true") {
-    icon.src = "image/horn_off.png?v=" + v;
+    icon.src = "image/horn_off.png?v=";// كانت  icon.src = "image/horn_off.png?v=" + v;  وغيرناها للتحميل من الكاش
   } else {
-    icon.src = "image/horn_on.png?v=" + v;
+    icon.src = "image/horn_on.png?v=" ; // كانت   icon.src = "image/horn_on.png?v=" + v;  وغيرناها للتحميل من الكاش
   }
 }
 // ◀️ دالة تطبيق الخلفية والثيم الديناميكي
@@ -1332,7 +1332,7 @@ function loadTimesFor(provinceCode, countryCode) {
 
   // اعمل عنصر سكربت جديد
   var script = document.createElement('script');
-  script.src = path + '?v=' + Date.now(); // نضيف رقم عشوائي لتفادي الكاش
+  script.src = path + '?v=' + Date.now(); // قمنا بحذف + '?v=' + Date.now() للتحميل من الكاش 
   script.onload = function () {
     if (window.TIMES_OBJ) {
       setStatus('تم تحميل ' + path);
@@ -3074,35 +3074,33 @@ function checkRemoteUpdate() {
 //setInterval(checkRemoteUpdate, 10000);
 ///////////////////////////////////////////////////////////////
 // ========== نظام التحديث عبر AppCache ==========
-// تمت إزالة أي كود قديم متعلق بـ checkForUpdates
+/// ========== زر تحديث الساعة (تنزيل الملفات من GitHub) ==========
 if ($('updateBtn')) {
     $('updateBtn').onclick = function() {
         if (!navigator.onLine) {
             alert('يرجى توصيل نقطة اتصال الموبايل أولاً.');
             return;
         }
-        setStatus('جاري التحقق من التحديث...');
-        try {
-            window.applicationCache.update();
-        } catch(e) {
-            setStatus('المتصفح لا يدعم التحديث التلقائي');
+        setStatus('جاري تحميل التحديث...');
+        // قائمة الملفات التي قد تتغير (أضف أو احذف حسب حاجتك)
+        var files = ['index.html', 'script.js', 'style.css'];
+        var base = 'https://mohkotb.github.io/mwaqeet-private/';
+        var count = 0;
+        for (var i = 0; i < files.length; i++) {
+            var a = document.createElement('a');
+            a.href = base + files[i];
+            a.download = files[i];
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            count++;
+        }
+        if (count === files.length) {
+            alert('تم تحميل الملفات الجديدة. تفضل بفتح تطبيق "الملفات"، وانسخها من مجلد التنزيلات إلى مجلد mwaqeet، ثم أعد تشغيل Fully Kiosk.');
+        } else {
+            alert('فشل تحميل بعض الملفات. حاول مجدداً.');
         }
     };
 }
-
-window.applicationCache.addEventListener('updateready', function() {
-    if (window.applicationCache.status === window.applicationCache.UPDATEREADY) {
-        alert('تم تحميل النسخة الجديدة، سيتم إعادة التشغيل.');
-        window.location.reload();
-    }
-});
-
-window.applicationCache.addEventListener('noupdate', function() {
-    setStatus('نسختك هي الأحدث');
-});
-
-window.applicationCache.addEventListener('error', function() {
-    setStatus('فشل التحديث، تأكد من الاتصال');
-});
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
