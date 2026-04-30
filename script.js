@@ -1129,9 +1129,9 @@ function updateHeaderAudioIcon() {
   var v = new Date().getTime(); // عشان يمسح الكاش ويحدث الصورة فوراً
 
   if (isAdhanMuted === true || String(isAdhanMuted) === "true") {
-    icon.src = "image/horn_off.png?v=";// كانت  icon.src = "image/horn_off.png?v=" + v;  وغيرناها للتحميل من الكاش
+    icon.src = "image/horn_off.png";// كانت  icon.src = "image/horn_off.png?v=" + v;  وغيرناها للتحميل من الكاش
   } else {
-    icon.src = "image/horn_on.png?v=" ; // كانت   icon.src = "image/horn_on.png?v=" + v;  وغيرناها للتحميل من الكاش
+    icon.src = "image/horn_on.png" ; // كانت   icon.src = "image/horn_on.png?v=" + v;  وغيرناها للتحميل من الكاش
   }
 }
 // ◀️ دالة تطبيق الخلفية والثيم الديناميكي
@@ -1332,7 +1332,7 @@ function loadTimesFor(provinceCode, countryCode) {
 
   // اعمل عنصر سكربت جديد
   var script = document.createElement('script');
-  script.src = path + '?v=' + Date.now(); // قمنا بحذف + '?v=' + Date.now() للتحميل من الكاش 
+  script.src = path // قمنا بتعديلها للتحميل من الكاش script.src = path + '?v=' + Date.now();
   script.onload = function () {
     if (window.TIMES_OBJ) {
       setStatus('تم تحميل ' + path);

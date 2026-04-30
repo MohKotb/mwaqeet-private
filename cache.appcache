@@ -1,13 +1,10 @@
 CACHE MANIFEST
-# version 31.04.26
+# version 30.04.26
 
 CACHE:
 index.html
 style.css
 script.js
-audio/adhan.mp3
-audio/iqama.mp3
-audio/bell.mp3
 image/horn_on.png
 image/horn_off.png
 image/v-2.jpg
