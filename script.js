@@ -3073,32 +3073,19 @@ function checkRemoteUpdate() {
 // تشغيل الفحص كل 10 ثوانٍ
 //setInterval(checkRemoteUpdate, 10000);
 ///////////////////////////////////////////////////////////////
-// ========== نظام التحديث عبر AppCache ==========
-/// ========== زر تحديث الساعة (تنزيل الملفات من GitHub) ==========
+// ========== زر تحديث الساعة (نسخة محسّنة) ==========
 if ($('updateBtn')) {
     $('updateBtn').onclick = function() {
-        if (!navigator.onLine) {
-            alert('يرجى توصيل نقطة اتصال الموبايل أولاً.');
-            return;
-        }
-        setStatus('جاري تحميل التحديث...');
-        // قائمة الملفات التي قد تتغير (أضف أو احذف حسب حاجتك)
+        // نعرض تنبيه بداية التحديث فوراً
+        alert('سيتم تحميل 3 ملفات تحديث. بعد اكتمال التحميل، انقلها من مجلد التنزيلات إلى مجلد mwaqeet وأعد تشغيل التطبيق.');
+        
+        // قائمة الملفات المطلوبة
         var files = ['index.html', 'script.js', 'style.css'];
         var base = 'https://mohkotb.github.io/mwaqeet-private/';
-        var count = 0;
+        
         for (var i = 0; i < files.length; i++) {
-            var a = document.createElement('a');
-            a.href = base + files[i];
-            a.download = files[i];
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            count++;
-        }
-        if (count === files.length) {
-            alert('تم تحميل الملفات الجديدة. تفضل بفتح تطبيق "الملفات"، وانسخها من مجلد التنزيلات إلى مجلد mwaqeet، ثم أعد تشغيل Fully Kiosk.');
-        } else {
-            alert('فشل تحميل بعض الملفات. حاول مجدداً.');
+            // نستخدم window.open لفتح الملف مباشرة مما يجبر المتصفح على التحميل
+            window.open(base + files[i], '_blank');
         }
     };
 }
