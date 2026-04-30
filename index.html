@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" manifest="cache.manifest">
+
+<head>
+  <script>
+    // منع التكبير فوراً قبل تحميل أي شيء
+    (function () {
+      var meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'viewport';
+        document.head.appendChild(meta);
+      }
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover';
+      // منع أحداث اللمس المتعدد
+      document.addEventListener('touchstart', function (e) {
+        if (e.touches.length > 1) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+      });
+    })();
+  </script>
+
+  <meta charset="utf-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+  <title>مواقيت - final bundle</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div id="overlay">
+
+    <div class="title" id="overlayTitle">--</div>
+    <div class="counter" id="overlayCounter">--</div>
+  </div>
+
+
+  <div id="ticker">
+    <marquee direction="right" id="marq" behavior="scroll" scrollamount="4">
+      <span>شـــركة إتقــــان لخدمات المســـاجد 01004686257 / 01017001953•</span>
+      <span>لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ •</span>
+      <span>لَا إِلَهَ إِلَّا اللَّهُ •</span>
+      <span>اللَّهُ أَكْبَرُ •</span>
+      <span>الْحَمْدُ لِلَّهِ •</span>
+      <span>سُبْحَانَ اللَّهِ •</span>
+      <span>سُبْحَانَ اللَّهِ الْعَظِيمِ •</span>
+      <span>سُبْحَانَ اللَّهِ وَبِحَمْدِهِ •</span>
+      <span>أسْتَغْفِرُ اللَّهَ •</span>
+      <span>حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ •</span>
+      <span>اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ •</span>
+      <span>رَبِّ اغْفِرْ لِي وَارْحَمْنِي وَاهْدِنِي وَعَافِنِي وَارْزُقْنِي •</span>
+      <span>رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ •</span>
+      <span>اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ •</span>
+      <span>اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحُزْنِ •</span>
+      <span>يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ •</span>
+      <span>لَا إِلَهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ •</span>
+      <span>اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ •</span>
+      <span>سُبْحَانَ الْمَلِكِ الْقُدُّوسِ •</span>
+      <span>رَبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ •</span>
+      <span>اللَّهُمَّ إِنِّي أَسْأَلُكَ الْجَنَّةَ وَأَعُوذُ بِكَ مِنَ النَّارِ •</span>
+      <span>قُلْ هُوَ اللَّهُ أَحَدٌ • اللَّهُ الصَّمَدُ • لَمْ يَلِدْ وَلَمْ يُولَدْ • وَلَمْ يَكُنْ لَهُ كُفُوًا
+        أَحَدٌ •</span>
+      <span>شـــركة إتقــــان لخدمات المســـاجد 01004686257 / 01017001953•</span>
+      <span>الَّذِينَ يَذْكُرُونَ اللَّهَ قِيَامًا وَقُعُودًا وَعلى جُنُوبِهِمْ •</span>
+      <span>إِنَّ فِي خَلْقِ السَّمَاوَاتِ وَالْأَرْضِ واختلَفِ الليلِ والنَّهارِ لَآيَاتٍ لِأُولِي الْأَلْبَابِ
+        •</span>
+      <span>لَقَدْ كَانَ لَكُمْ فِي رَسُولِ اللَّهِ أُسْوَةٌ حَسَنَةٌ •</span>
+      <span>وَمَا أَرْسَلْنَاكَ إِلَّا رَحْمَةً لِلْعَالَمِينَ •</span>
+      <span>وَقُلْ رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا •</span>
+      <span>وَاخْفِضْ لَهُمَا جَنَاحَ الذُّلِّ مِنَ الرَّحْمَةِ •</span>
+      <span>وَوَصَّيْنَا الْإِنْسَانَ بِوَالِدَيْهِ حُسْنًا •</span>
+      <span>يَا أَيُّهَا الَّذِينَ آمَنُوا اصْبِرُوا وَصَابِرُوا •</span>
+      <span>إِنَّ اللَّهَ مَعَ الصَّابِرِينَ •</span>
+      <span>عَلَيْهِ تَوَكَّلْتُ وَإِلَيْهِ أُنِيبُ •</span>
+      <span>وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ •</span>
+      <span>فَإِنَّ مَعَ الْعُسْرِ يُسْرًا • إِنَّ مَعَ الْعُسْرِ يُسْرًا •</span>
+      <span>وَقُلْ جَاءَ الْحَقُّ وَزَهَقَ الْبَاطِلُ •</span>
+      <span>وَقُلِ اعْمَلُوا فَسَيَرَى اللَّهُ عَمَلَكُمْ •</span>
+      <span>شـــركة إتقــــان لخدمات المســـاجد 01004686257 / 01017001953•</span>
+      <span>وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ •</span>
+      <span>وَمَنْ يَتَّقِ اللَّهَ يَجْعَلْ لَهُ مَخْرَجًا •</span>
+      <span>سُبْحَانَكَ لَا عِلْمَ لَنَا إِلَّا مَا عَلَّمْتَنَا •</span>
+      <span>رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ •</span>
+      <span>رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِنْ قَبْلِنَا •</span>
+      <span>رَبَّنَا لَا تُؤَاخِذْنَا إِنْ نَسِينَا أَوْ أَخْطَأْنَا •</span>
+      <span>اللَّهُمَّ اعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا •</span>
+      <span>اللَّهُمَّ أنْتَ مَوْلَانَا فَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ •</span>
+      <span>صَلَّى اللَّهُ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ •</span>
+    </marquee>
+  </div>
+
+  <div id="menuBtn">
+    <div class="hamburger-lines">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+
+  <div id="audioIndicator">
+    <img id="headerAudioIcon" src="image/horn_on.png" width="30">
+  </div>
+
+  <div id="sideMenu" role="dialog" aria-label="إعدادات">
+
+    <div class="menuInner" id="menuInner">
+      <label>الدولة
+        <select id="countrySelect"></select>
+      </label>
+      <label>المحافظة
+        <select id="provinceSelect"></select>
+      </label>
+      <label>التوقيت الصيفي
+        <select id="dstSelect">
+          <option value="auto">تلقائي</option>
+          <option value="on">تشغيل</option>
+          <option value="off">إيقاف</option>
+        </select>
+      </label>
+      <label>وضع عرض الساعة
+        <select id="timeDisplayModeSelect">
+          <option value="manual">يدوي (حسب برنامج مواقيت الصلاة)</option>
+          <option value="auto">تلقائي (حسب المنطقة الزمنية)</option>
+        </select>
+      </label>
+      <div
+        style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 15px; font-size: 12px; border: 1px solid #ffeaa7;">
+        💡 <strong>ملاحظات:</strong>
+        <div>• <strong>يدوي:</strong> الساعة الكبيرة تُضبط تلقائياً حسب التوقيت الصيفي الذي تحدده (تلقائي/تشغيل/إيقاف).
+        </div>
+        <div>• <strong>تلقائي:</strong> الساعة الكبيرة تعرض توقيت الجهاز تماماً دون أي تعديل. استخدم هذا الخيار إذا كانت
+          ساعة الجهاز مضبوطة مسبقاً على التوقيت الصحيح.</div>
+      </div>
+      <label>اسم المسجد
+        <input id="mosqueName" type="text" placeholder="أدخل اسم المسجد هنا">
+      </label>
+      <button class="btn" id="iqamaToggle">أوقات الإقامة ▾</button>
+      <div id="iqamaSubMenu" class="submenu">
+        <label>الفجر: <input id="iqama_fajr" type="number" min="4" max="180" value="20"> دقيقة</label>
+        <label>الظهر: <input id="iqama_dhuhr" type="number" min="4" max="180" value="15"></label>
+        <label>العصر: <input id="iqama_asr" type="number" min="4" max="180" value="15"></label>
+        <label>المغرب: <input id="iqama_maghrib" type="number" min="4" max="180" value="10"></label>
+        <label>العشاء: <input id="iqama_isha" type="number" min="4" max="180" value="15"></label>
+        <label>مدة شاشة "الصلاة الآن" (دقائق): <input id="prayNowMinutes" type="number" min="1" max="120"
+            value="10"></label>
+      </div>
+
+      <button class="btn" id="prayerOffsetToggle">تعديل مواقيت الصلاة ▾</button>
+      <div id="prayerOffsetSubMenu" class="submenu">
+        <label>الفجر: <input id="offset_fajr" type="number" min="-10" max="10" value="0"> دقيقة</label>
+        <label>الشروق: <input id="offset_shurooq" type="number" min="-10" max="10" value="0"> دقيقة</label>
+        <label>الظهر: <input id="offset_dhuhr" type="number" min="-10" max="10" value="0"> دقيقة</label>
+        <label>العصر: <input id="offset_asr" type="number" min="-10" max="10" value="0"> دقيقة</label>
+        <label>المغرب: <input id="offset_maghrib" type="number" min="-10" max="10" value="0"> دقيقة</label>
+        <label>العشاء: <input id="offset_isha" type="number" min="-10" max="10" value="0"> دقيقة</label>
+        <div
+          style="background: #e2e3e5; color: #383d41; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; border: 1px solid #d6d8db;">
+          <strong>💡 ملاحظة:</strong>
+          <div>• التعديل بالدقائق (+ للزيادة، - للنقصان).</div>
+          <div>• أقصى حد مسموح 10 دقائق لتجنب الأخطاء.</div>
+        </div>
+      </div>
+      <!-- بعد تبويب أوقات الإقامة -->
+
+      <button class="btn" onclick="toggleSubMenu('fridaySermonSubmenu')">إعدادات خطبة الجمعة ▾</button>
+
+      <div id="fridaySermonSubmenu" class="submenu" style="display: none;">
+        <label>تفعيل عرض الخطبة:
+          <select id="fridaySermonEnabled">
+            <option value="on">تشغيل</option>
+            <option value="off">إيقاف</option>
+          </select>
+        </label>
+        <br>
+        <label>مدة الخطبة (بالدقائق):
+          <input id="fridaySermonDuration" type="number" value="20" style="width: 60px;">
+        </label>
+      </div>
+
+      <button class="btn" id="athkarToggle">إعدادات الأذكار بعد الصلاة ▾</button>
+      <div id="athkarSubMenu" class="submenu">
+        <label>تفعيل الأذكار بعد الصلاة
+          <select id="athkarEnabled">
+            <option value="on">تشغيل</option>
+            <option value="off">إيقاف</option>
+          </select>
+        </label>
+
+        <label>عرض الأذكار بعد الإقامة بـ
+          <input id="athkarDelay" type="number" min="0" max="30" value="0"> دقائق
+        </label>
+
+        <label>مدة عرض الأذكار
+          <input id="athkarDuration" type="number" min="1" max="30" value="10"> دقائق
+        </label>
+
+        <div
+          style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; border: 1px solid #ffeaa7;">
+          <strong>💡 ملاحظة:</strong>
+          <div>• الأذكار تظهر بعد انتهاء شاشة "الصلاة الآن"اذا تم وضع 0 في خانة عرض الاذكار بعد الاقامة </div>
+          <div>• يتم العرض بصورة في منتصف الشاشة</div>
+          <div>• ارجع للإعدادات لتعديل المدة أو التعطيل</div>
+        </div>
+      </div>
+
+      <!-- بعد قسم إعدادات الأذكار بعد الصلاة -->
+      <button class="btn" id="fastingReminderToggle">إعدادات التذكير بالصيام ▾</button>
+      <div id="fastingReminderSubMenu" class="submenu">
+        <label>تفعيل التذكير بالصيام
+          <select id="fastingReminderEnabled">
+            <option value="on">تشغيل</option>
+            <option value="off">إيقاف</option>
+          </select>
+        </label>
+
+        <label>عرض التذكير بعد الأذكار بـ
+          <input id="fastingReminderDelay" type="number" min="1" max="60" value="5"> دقائق
+        </label>
+
+        <label>مدة عرض التذكير
+          <input id="fastingReminderDuration" type="number" min="1" max="30" value="10"> دقائق
+        </label>
+
+        <label>عرض التذكير بعد الصلوات:</label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" class="prayerCheck" value="fajr" checked> الفجر
+        </label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" class="prayerCheck" value="dhuhr" checked> الظهر
+        </label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" class="prayerCheck" value="asr" checked> العصر
+        </label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" class="prayerCheck" value="maghrib" checked> المغرب
+        </label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" class="prayerCheck" value="isha" checked> العشاء
+        </label>
+
+        <div
+          style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; border: 1px solid #c3e6cb;">
+          <strong>💡 ملاحظة:</strong>
+          <div>• التذكير بصيام يوم الإثنين: يعرض يوم الأحد</div>
+          <div>• التذكير بصيام يوم الخميس: يعرض يوم الأربعاء</div>
+          <div>• التذكير بصيام الأيام البيض: يعرض يوم 12 و 13 و 14 هجري</div>
+          <div>• الأولوية للأيام البيض إذا تزامنت مع تذكير آخر</div>
+          <div>• لا تذكير في يوم 13 ذو الحجة (لا صيام)</div>
+        </div>
+      </div>
+
+      <!-- بعد قسم إعدادات التذكير بالصيام -->
+      <button class="btn" id="announcementToggle">إدارة الإعلانات ▾</button>
+      <div id="announcementSubMenu" class="submenu" style="display:none;">
+        <input type="hidden" id="announcementId" value="">
+
+        <label>عنوان الإعلان
+          <input id="announcementTitle" type="text" placeholder="مثال: إشعار مهم">
+        </label>
+
+        <label>نوع الإعلان
+          <select id="announcementType">
+            <option value="text">نص</option>
+            <option value="image">صورة</option>
+            <option value="video">فيديو</option>
+          </select>
+        </label>
+
+        <label id="announcementMediaUrlLabel">رابط الصورة / الفيديو
+          <input id="announcementMediaUrl" type="text" placeholder="رابط الصورة أو الفيديو">
+        </label>
+
+        <label>المحتوى
+          <textarea id="announcementContent" rows="4" placeholder="نص الإعلان"></textarea>
+        </label>
+
+        <div class="announcement-row">
+          <div style="margin-bottom: 8px; font-weight: 700; color: #ffd86b;">المدة</div>
+          <button type="button" class="announcement-duration-btn" data-duration="15">15 ثانية</button>
+          <button type="button" class="announcement-duration-btn" data-duration="30">30 ثانية</button>
+          <button type="button" class="announcement-duration-btn" data-duration="60">60 ثانية</button>
+        </div>
+
+        <label>الأولوية
+          <select id="announcementPriority">
+            <option value="normal">عادي</option>
+            <option value="high">عالي</option>
+          </select>
+        </label>
+
+        <label>وقت العرض</label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" id="announcementTimingBetween" checked> بين الأذان والإقامة
+        </label>
+        <label style="display: block; margin: 5px 0;">
+          <input type="checkbox" id="announcementTimingAfterAzkar"> بعد الأذكار
+        </label>
+
+        <label>فاصل أمان قبل الإقامة (دقائق)
+          <input id="announcementBuffer" type="number" min="0" max="10" value="2">
+        </label>
+
+        <button type="button" class="btn" id="saveAnnouncementBtn">حفظ الإعلان</button>
+
+        <div id="announcementList" class="announcement-list" style="margin-top: 15px;"></div>
+      </div>
+
+      <button class="btn" id="backgroundToggle">تغيير خلفية الشاشة ▾</button>
+      <div id="backgroundSubMenu" class="submenu">
+        <label>اختر الخلفية:
+          <select id="backgroundSelect">
+            <option value="v-2.jpg">الخلفية الافتراضية</option>
+            <option value="bg1.jpg">خلفية 2</option>
+            <option value="bg2.jpg">خلفية 3</option>
+            <option value="bg3.jpg">خلفية 4</option>
+            <option value="bg4.jpg">خلفية 5</option>
+            <option value="bg5.jpg">خلفية 6</option>
+            <option value="bg6.jpg">خلفية 7</option>
+            <option value="bg7.jpg">خلفية 8</option>
+          </select>
+        </label>
+        <div style="margin-top: 10px; color: #aaa; font-size: 12px;">
+          • ضع صور الخلفيات في مجلد image/<br>
+          • الصور يجب أن تكون بصيغة .jpg<br>
+          • أعد تحميل الصفحة بعد التغيير
+        </div>
+      </div>
+
+      <label>تعديل التاريخ الهجري
+        <select id="hijriOffset">
+          <option value="0">لا تعديل</option>
+          <option value="1">+1 يوم</option>
+          <option value="2">+2 يوم</option>
+          <option value="3">+3 يوم</option>
+          <option value="-1">-1 يوم</option>
+          <option value="-2">-2 يوم</option>
+          <option value="-3">-3 يوم</option>
+        </select>
+      </label>
+
+      <label>وضع توفير الطاقة
+        <select id="energySelect">
+          <option value="off">إيقاف</option>
+          <option value="on">تشغيل</option>
+          
+        </select>
+      </label>
+       
+      <div
+          style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; border: 1px solid #c3e6cb;">
+          <strong>💡 ملاحظات هامة:</strong>
+          <div>• توفير الطاقة يقوم باغلاق الشاشة عن العمل للحفاظ علي عمرها الافتراضي</div>
+          <div>• تتوقف الشاشة بعد الشروق بساعة وتعمل قبل الظهر بساعة  </div>
+          <div>• تتوقف الشاشة بعد الظهر بساعة وتعمل قبل العصر بـ 45 دقيقة</div>
+          <div>• تتوقف الشاشة بعد العصر بساعة وتعمل قبل المغرب بـ 45 دقيقة</div>
+          <div>• تتوقف الشاشة بعد العشاء بساعة ونصف وتعمل قبل الفجر بساعة </div>
+        </div>
+
+      <button class="btn" id="muteAdhanBtn" onclick="toggleMute()" style="margin-top: 15px;">كتم صوت الاذان 🔊</button>
+
+      <button class="btn" onclick="saveSettings()"
+        style="background: #28a745; color: white; margin-top: 20px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
+        حفظ الإعدادات 
+      </button>
+
+     
+
+      <!-- ✨ زر إعادة الضبط للمصنع -->
+      <button class="btn" id="resetToDefaultBtn"
+        style="background: #dc3545; color: white; margin-top: 10px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
+        إعادة ضبط المصنع
+      </button>
+
+      <div style="margin-top:10px;font-size:13px;color:#ccc">الوضع: <span id="status">جاهز</span></div>
+      
+       <!-- ✨ زر تحديث الساعة -->
+      <button class="btn" id="updateBtn"
+        style="background: #3796a1; color: white; margin-top: 10px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
+       تحديث الساعة
+      </button>
+
+      <div class="footer-credits">
+        <div>تمت البرمجة بواسطة</div>
+        <div class="footer-name">م/ محمد قطب</div>
+        <div>بالتعاون مع</div>
+        <div class="footer-name"> م/عبدالرحمن الملاح</div>
+        <div class="footer-phone">
+          <div>تليفون: 01004686257</div>
+          <div>تليفون: 01017001953</div>
+        </div>
+        <div class="footer-name">حقوق الطبع محفوظة لشركة اتقان</div>
+        <div class="watch-version">ver:26.04.26</div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="container">
+    <div id="mosqueDisplay"></div>
+
+    <!-- الساعة الجديدة المبسطة -->
+    <div id="clock">
+      <span class="digit-container" id="hours-container">
+        <span class="digit">12</span>
+      </span>
+      <span class="colon">:</span>
+      <span class="digit-container" id="minutes-container">
+        <span class="digit">00</span>
+      </span>
+      <span class="colon">:</span>
+      <span class="digit-container" id="seconds-container">
+        <span class="digit">00</span>
+      </span>
+      <span class="ampm" id="ampm">ص</span>
+    </div>
+
+    <div id="datesRow">
+      <div class="hijri-date">
+        <div id="hijriDay">--</div>
+        <div id="hijriMonth">-----</div>
+        <div id="hijriYear">--- هـ</div>
+      </div>
+
+      <div id="dayName">---</div>
+
+      <div class="greg-date">
+        <div id="gregDay">--</div>
+        <div id="gregMonth">-----</div>
+        <div id="gregYear">----</div>
+      </div>
+    </div>
+
+    <div class="prayers-header">
+      <div class="header-col">الأذان</div>
+      <div class="header-col">الصلاة</div>
+      <div class="header-col">الإقامة</div>
+    </div>
+
+    <div class="prayers" id="prayerList"></div>
+
+    <div id="remaining">المتبقي للصلاة القادمة: --:--:--</div>
+
+    <div id="announcementScreen" class="announcement-screen" aria-live="polite" aria-atomic="true">
+      <div class="announcement-panel">
+        <div class="announcement-badge" id="announcementBadge">إعلان</div>
+        <div class="announcement-title" id="announcementTitleDisplay">--</div>
+        <div class="announcement-body" id="announcementBodyDisplay">--</div>
+        <div class="announcement-media" id="announcementMediaDisplay"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+  <audio id="adhanAudio" src="audio/adhan.mp3"></audio>
+  <audio id="iqamaAudio" src="audio/iqama.mp3"></audio>
+  <audio id="bellAudio" src="audio/bell.mp3"></audio>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
