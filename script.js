@@ -11,7 +11,7 @@ var SETTINGS = {
   timeDisplayMode: 'manual',  // طريقة عرض الساعة: 'manual' أو 'auto'
   iqamaMinutes: { fajr: 10, dhuhr: 10, asr: 10, maghrib: 5, isha: 10 },
   prayerOffsets: { fajr: 0, shurooq: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, // ◀️ الديفولت صفر
-  prayNowMinutes: 10, energySaving: 'off', mosqueName: 'اسم المسجد هنا', // ◀️ ضيف اسم المسجد هنا
+  prayNowMinutes: 10, energySaving: 'on', mosqueName: 'اسم المسجد هنا', // ◀️ ضيف اسم المسجد هنا
   hijriOffset: 0, // ◀️ نضيف هذا للتعديل علي التاريخ الهجري - متوافق مع كيت كات/
   athkarEnabled: 'on',      // ◀️ ضيف هنا
   athkarDelay: 0,           // ◀️ ضيف هنا  
@@ -136,7 +136,7 @@ var countdownInterval = null;
 var overlayTimeout = null;
 var currentPrayerIndex = -1;
 var clockInterval = null;
-var isExtremeMode = false;
+//var isExtremeMode = false;
 var menuOpen = false;
 var isInit = false;
 var lastRenderedDay = -1; // ◀️ متغير جديد لمتابعة تغيير اليوم
@@ -2030,6 +2030,7 @@ function splitHijriDateManual(hijriString) {
   }
 }
 
+
 // 🔧 تحسين وضع توفير الطاقة - يعمل فقط في أوقات الصلوات المحددة
 function checkEnergySavingMode() {
   if (SETTINGS.energySaving === 'off' || !TIMES_OBJ) return;
@@ -2044,57 +2045,46 @@ function checkEnergySavingMode() {
   var times = getAdjustedPrayerTimes(line);
   var dstMode = getDSTMode();
 
-  var fajrTime = hhmmToToday(adjustTimeForDST(times[0], dstMode));
+  var fajrTime   = hhmmToToday(adjustTimeForDST(times[0], dstMode));
   var shurooqTime = hhmmToToday(adjustTimeForDST(times[1], dstMode));
-  var dhuhrTime = hhmmToToday(adjustTimeForDST(times[2], dstMode));
-  var asrTime = hhmmToToday(adjustTimeForDST(times[3], dstMode));
+  var dhuhrTime   = hhmmToToday(adjustTimeForDST(times[2], dstMode));
+  var asrTime     = hhmmToToday(adjustTimeForDST(times[3], dstMode));
   var maghribTime = hhmmToToday(adjustTimeForDST(times[4], dstMode));
-  var ishaTime = hhmmToToday(adjustTimeForDST(times[5], dstMode));
+  var ishaTime    = hhmmToToday(adjustTimeForDST(times[5], dstMode));
 
   var nowTime = now.getTime();
 
-  // === الفترة الوحيدة التي تعبر منتصف الليل ===
-  // نجعل fajrTime يشير إلى فجر الغد إذا كان قبل العشاء
-  var fajrForIshaInterval = new Date(fajrTime);
-  if (fajrForIshaInterval <= ishaTime) {
-    fajrForIshaInterval.setDate(fajrForIshaInterval.getDate() + 1);
-  }
+  // الفترة الليلية (تبقى كما كنت تستخدمها)
+  var ishaPlus90Mins = new Date(ishaTime.getTime() + 90 * 60000);
+  var fajrMinus90Mins = new Date(fajrTime.getTime() - 60 * 60000);
 
-  var intervals = [
-    // بعد العشاء بـ 1.5 ساعة → قبل الفجر بساعة
-    {
-      start: new Date(ishaTime.getTime() + 90 * 60000),
-      end: new Date(fajrForIshaInterval.getTime() - 60 * 60000)
-    },
-    // بعد الشروق بساعة → قبل الظهر بساعة
-    {
-      start: new Date(shurooqTime.getTime() + 60 * 60000),
-      end: new Date(dhuhrTime.getTime() - 60 * 60000)
-    },
-    // بعد الظهر بساعة → قبل العصر بـ 45 دقيقة
-    {
-      start: new Date(dhuhrTime.getTime() + 60 * 60000),
-      end: new Date(asrTime.getTime() - 45 * 60000)
-    },
-    // بعد العصر بساعة → قبل المغرب بـ 45 دقيقة
-    {
-      start: new Date(asrTime.getTime() + 60 * 60000),
-      end: new Date(maghribTime.getTime() - 45 * 60000)
-    }
-  ];
+  // فترات النهار (بنفس نمط الفترة الصباحية القديمة)
+  var shurooqPlus1Hour = new Date(shurooqTime.getTime() + 60 * 60000);
+  var dhuhrMinus1Hour = new Date(dhuhrTime.getTime() - 60 * 60000);
+
+  var dhuhrPlus1Hour = new Date(dhuhrTime.getTime() + 60 * 60000);
+  var asrMinus45Mins = new Date(asrTime.getTime() - 48 * 60000);
+
+  var asrPlus1Hour = new Date(asrTime.getTime() + 60 * 60000);
+  var maghribMinus45Mins = new Date(maghribTime.getTime() - 48 * 60000);
 
   var shouldSaveEnergy = false;
-  for (var i = 0; i < intervals.length; i++) {
-    var startMs = intervals[i].start.getTime();
-    var endMs = intervals[i].end.getTime();
-    // start < end صحيح الآن دائمًا بعد التصحيح
-    if (startMs < endMs && nowTime >= startMs && nowTime < endMs) {
-      shouldSaveEnergy = true;
-      break;
-    }
+
+  // نفس جملة الشرط التي طلبتها، مع إضافة باقي الفترات
+  if (
+    (nowTime > ishaPlus90Mins.getTime() || nowTime < fajrMinus90Mins.getTime()) ||
+    (nowTime > shurooqPlus1Hour.getTime() && nowTime < dhuhrMinus1Hour.getTime()) ||
+    (nowTime > dhuhrPlus1Hour.getTime() && nowTime < asrMinus45Mins.getTime()) ||
+    (nowTime > asrPlus1Hour.getTime() && nowTime < maghribMinus45Mins.getTime())
+  ) {
+    shouldSaveEnergy = true;
   }
 
-  applyEnergySaving(shouldSaveEnergy);
+  if (shouldSaveEnergy) {
+    applyEnergySaving(true);
+  } else {
+    applyEnergySaving(false);
+  }
 }
 
 // دالة تشغيل الاطفاء من خلال مازر بورد الاندرويد
@@ -2142,7 +2132,7 @@ function turnScreenOff() {
 
 ///////////////////////////////////////////
 
-// دالة توفير الطاقة (سيبها زي ما هي)
+// دالة توفير الطاقة 
 function applyEnergySaving(isEnergySaving) {
   try {
     if (isEnergySaving) {
@@ -2156,53 +2146,7 @@ function applyEnergySaving(isEnergySaving) {
     console.log('Error in energy saving:', e);
   }
 }
-// 🔧 وضع توفير الطاقة المتطرف
-function applyExtremeEnergySaving(isEnergySaving) {
-  if (isEnergySaving) {
-    document.body.classList.add('low-power-mode');
 
-    // محاولة تقليل الإضاءة الخلفية
-    tryControlBacklight(true);
-
-    // ✅ مسح المؤقت القديم قبل إنشاء جديد
-    if (countdownInterval) clearInterval(countdownInterval);
-    countdownInterval = null;
-    if (clockInterval) clearInterval(clockInterval);
-
-    // تحديث كل دقيقة فقط
-    clockInterval = setInterval(updateClockUI, 60000);
-
-  } else {
-    document.body.classList.remove('low-power-mode');
-    tryControlBacklight(false);
-
-    // ✅ مسح المؤقت القديم وإعادة إنشائه مع تحديث سريع
-    if (clockInterval) {
-      clearInterval(clockInterval);
-      clockInterval = setInterval(updateClockUI, 1000);
-    }
-    // ✅ إعادة تشغيل العد التنازلي للصلاة القادمة
-    updatePrayerHighlight();  // أو استدعاء renderTimes() إذا احتجت إعادة الرسم
-
-  }
-}
-
-// 🔧 محاولة التحكم في الإضاءة الخلفية (دعم محدود)
-function tryControlBacklight(turnOff) {
-  try {
-    // استخدام CSS filter أكثر قوة
-    if (turnOff) {
-      document.body.style.filter = 'brightness(0.00) contrast(0.05)';
-      document.body.style.backgroundColor = '#000000';
-    } else {
-      document.body.style.filter = 'brightness(1) contrast(1)';
-      document.body.style.backgroundColor = '';
-    }
-
-  } catch (e) {
-    console.log('Backlight control not supported:', e);
-  }
-}
 
 // 🔧 دالة تنظيف استباقية للأنيميشن
 function cleanupClockAnimations() {
@@ -2694,7 +2638,7 @@ function resetToDefaultSettings() {
     country: 'EG', province: 'CAIRO2', dst: 'auto',
     iqamaMinutes: { fajr: 10, dhuhr: 10, asr: 10, maghrib: 5, isha: 10 },
     prayerOffsets: { fajr: 0, shurooq: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 },
-    prayNowMinutes: 10, energySaving: 'off', mosqueName: 'اسم المسجد هنا',
+    prayNowMinutes: 10, energySaving: 'on', mosqueName: 'اسم المسجد هنا',
     hijriOffset: 0,
     athkarEnabled: 'on',
     athkarDelay: 0,
