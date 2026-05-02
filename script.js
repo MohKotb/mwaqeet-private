@@ -26,8 +26,8 @@ var SETTINGS = {
     maghrib: true,
     isha: true
   },
-  fridaySermonEnabled: 'off', // ◀️ خيار جديد للخطبة
-  fridaySermonDuration: 20,   // ◀️ مدة الخطبة الافتراضية
+  fridaySermonEnabled: 'on', // ◀️ خيار جديد للخطبة
+  fridaySermonDuration: 35,   // ◀️ مدة الخطبة الافتراضية
   backgroundImage: 'v-2.jpg' // ◀️ متغير للخلفية 
 };
 
@@ -565,8 +565,8 @@ function loadSettings() {
     $('prayNowMinutes').value = SETTINGS.prayNowMinutes;
 
     // خيارات خطبة الجمعة
-    $('fridaySermonEnabled').value = SETTINGS.fridaySermonEnabled || 'off';
-    $('fridaySermonDuration').value = SETTINGS.fridaySermonDuration || 20;
+    $('fridaySermonEnabled').value = SETTINGS.fridaySermonEnabled || 'on';
+    $('fridaySermonDuration').value = SETTINGS.fridaySermonDuration || 35;
 
     // للاذكار بعد الصلاة
     $('athkarEnabled').value = SETTINGS.athkarEnabled || 'on';
@@ -2649,8 +2649,8 @@ function resetToDefaultSettings() {
     fastingReminderPrayers: {
       fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true
     },
-    fridaySermonEnabled: 'off',
-    fridaySermonDuration: 20,
+    fridaySermonEnabled: 'on',
+    fridaySermonDuration: 35,
     backgroundImage: 'v-2.jpg',
     isAdhanMuted: false
   };
