@@ -632,7 +632,7 @@ function loadSettings() {
     // تحديث نص زر الكتم الجديد (muteAdhanBtn) إن وجد
     var newMuteBtn = $('muteAdhanBtn');
     if (newMuteBtn) {
-      newMuteBtn.innerHTML = isAdhanMuted ? "وضع الكتم: مشغل (جرس) 🔔" : "وضع الكتم: معطل (أذان) 🔊";
+      newMuteBtn.innerHTML = isAdhanMuted ? "وضع الكتم: مشغل (جرس) 🔔" : "وضع الصوت: مشغل (أذان) 🔊";
       newMuteBtn.style.backgroundColor = isAdhanMuted ? "#840101" : "#2e7d32";
     }
 
