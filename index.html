@@ -345,45 +345,45 @@
         <select id="energySelect">
           <option value="off">إيقاف</option>
           <option value="on">تشغيل</option>
-          
+
         </select>
       </label>
-       
+
       <div
-          style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; border: 1px solid #c3e6cb;">
-          <strong>💡 ملاحظات هامة:</strong>
-          <div>• توفير الطاقة يقوم باغلاق الشاشة عن العمل للحفاظ علي عمرها الافتراضي</div>
-          <div>• تتوقف الشاشة بعد الشروق بساعة وتعمل قبل الظهر بساعة  </div>
-          <div>• تتوقف الشاشة بعد الظهر بساعة وتعمل قبل العصر بـ 45 دقيقة</div>
-          <div>• تتوقف الشاشة بعد العصر بساعة وتعمل قبل المغرب بـ 45 دقيقة</div>
-          <div>• تتوقف الشاشة بعد العشاء بساعة ونصف وتعمل قبل الفجر بساعة </div>
-        </div>
+        style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; border: 1px solid #c3e6cb;">
+        <strong>💡 ملاحظات هامة:</strong>
+        <div>• توفير الطاقة يقوم باغلاق الشاشة عن العمل للحفاظ علي عمرها الافتراضي</div>
+        <div>• تتوقف الشاشة بعد الشروق بساعة وتعمل قبل الظهر بساعة </div>
+        <div>• تتوقف الشاشة بعد الظهر بساعة وتعمل قبل العصر بـ 45 دقيقة</div>
+        <div>• تتوقف الشاشة بعد العصر بساعة وتعمل قبل المغرب بـ 45 دقيقة</div>
+        <div>• تتوقف الشاشة بعد العشاء بساعة ونصف وتعمل قبل الفجر بساعة </div>
+      </div>
 
       <button class="btn" id="muteAdhanBtn" onclick="toggleMute()" style="margin-top: 15px;">كتم صوت الاذان 🔊</button>
 
       <button class="btn" onclick="saveSettings()"
         style="background: #28a745; color: white; margin-top: 20px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
-        حفظ الإعدادات 
+        حفظ الإعدادات
       </button>
 
-     
-       
-       <!-- ✨ زر تحديث الساعة -->
+
+
+      <!-- ✨ زر تحديث الساعة -->
       <button class="btn" id="updateBtn"
         style="background: #3796a1; color: white; margin-top: 10px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
-       تحديث الساعة
+        تحديث الساعة
       </button>
 
-    
 
-        <!-- ✨ زر إعادة الضبط للمصنع: تم نقله إلى أسفل القائمة مع مسافة كبيرة -->
+
+      <!-- ✨ زر إعادة الضبط للمصنع: تم نقله إلى أسفل القائمة مع مسافة كبيرة -->
       <button class="btn" id="resetToDefaultBtn"
         style="background: #dc3545; color: white; margin-top: 40px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
         إعادة ضبط المصنع
       </button>
 
       <div style="margin-top:10px;font-size:13px;color:#ccc">الوضع: <span id="status">جاهز</span></div>
-   
+
 
       <div class="footer-credits">
         <div>تمت البرمجة بواسطة</div>
@@ -460,9 +460,9 @@
 
 
 
-  <audio id="adhanAudio" src="audio/adhan.mp3"></audio>
-  <audio id="iqamaAudio" src="audio/iqama.mp3"></audio>
-  <audio id="bellAudio" src="audio/bell.mp3"></audio>
+  <audio id="adhanAudio" src="audio/adhan.mp3" preload="auto"></audio>
+  <audio id="iqamaAudio" src="audio/iqama.mp3" preload="auto"></audio>
+  <audio id="bellAudio" src="audio/bell.mp3" preload="auto"></audio>
 
   <script src="script.js"></script>
 </body>

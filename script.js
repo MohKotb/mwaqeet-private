@@ -163,7 +163,6 @@ var athkarTimeout = null;    // ◀️ ضيف هناللاذكار بعد الص
 var fastingReminderTimeout = null; // ◀️ ضيف هناللتذكير بالصيام بعد الصلاة
 var iqamaCountdownInterval = null;
 var adhanPlayingInterval = null;
-var bellAudio = null; // سنقوم بتهيئته لاحقاً لعمل صوت الجرس عند كتم الاذان
 var totalIqamaSeconds = 0;
 var elapsedAdhanSeconds = 0;
 var fastingImages = {
@@ -1105,21 +1104,16 @@ function updateAnnouncementStateAndSchedule() {
 // ✅ 1. دالة تبديل الكتم (المحرك)
 function toggleMute() {
   isAdhanMuted = !isAdhanMuted;
-
-  if (typeof SETTINGS !== 'undefined') {
-    SETTINGS.isAdhanMuted = isAdhanMuted;
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
-  }
-
-  // ✅ لازم الـ ID هنا يكون muteAdhanBtn عشان يطابق الـ HTML
+  // حفظ الحالة في إعدادات التطبيق دون استدعاء saveSettings
+  SETTINGS.isAdhanMuted = isAdhanMuted;
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
+  
   var btn = document.getElementById('muteAdhanBtn');
   if (btn) {
-    btn.innerHTML = isAdhanMuted ? "وضع الكتم: مشغل (جرس) 🔔" : "وضع الكتم: معطل (أذان) 🔊";
+    btn.innerHTML = isAdhanMuted ? "وضع الكتم: مشغل (جرس) 🔔" : "وضع الصوت: مشغل (أذان) 🔊";
     btn.style.backgroundColor = isAdhanMuted ? "#840101" : "#2e7d32";
   }
-
   updateHeaderAudioIcon();
-
 }
 // ✅ 2. دالة تحديث الأيقونة (العرض)
 function updateHeaderAudioIcon() {
@@ -1668,18 +1662,37 @@ function playAdhanAudioOnly(optionalStartTime) {
     }, remainingAdhan * 1000);
   }
 
-  if (elapsedAdhanSeconds < ADHAN_DURATION_SECONDS) {
-    try {
-      var adhanAudio = document.getElementById('adhanAudio');
-      var bellAudio = document.getElementById('bellAudio');
-      if (adhanAudio) { adhanAudio.pause(); adhanAudio.currentTime = 0; }
-      if (bellAudio) { bellAudio.pause(); bellAudio.currentTime = 0; }
-      if (isAdhanMuted) {
-        if (bellAudio) { bellAudio.volume = 1; bellAudio.play().catch(function (e) { }); }
-      } else {
-        if (adhanAudio) { adhanAudio.volume = 1; adhanAudio.play().catch(function (e) { }); }
+   if (elapsedAdhanSeconds < ADHAN_DURATION_SECONDS) {
+    // أوقف أي تشغيل سابق وأعد ضبط الوقت
+    var adhan = document.getElementById('adhanAudio');
+    var bell = document.getElementById('bellAudio');
+    
+    if (adhan) {
+      adhan.pause();
+      adhan.currentTime = 0;
+    }
+    if (bell) {
+      bell.pause();
+      bell.currentTime = 0;
+    }
+
+    if (isAdhanMuted) {
+      // تشغيل الجرس
+      if (bell) {
+        bell.load();   // إعادة تحميل المصدر لضمان الجاهزية
+        bell.play().catch(function(e) {
+          console.log("خطأ تشغيل الجرس: ", e);
+        });
       }
-    } catch (e) { }
+    } else {
+      // تشغيل الأذان
+      if (adhan) {
+        adhan.load();
+        adhan.play().catch(function(e) {
+          console.log("خطأ تشغيل الأذان: ", e);
+        });
+      }
+    }
   }
 }
 // ✅ دالة جديدة لتحديث العد التنازلي للإقامة
@@ -1731,7 +1744,15 @@ function showPrayerNowCompatible(optionalStartTime) {
   var isFriday = (now.getDay() === 5);
   var isDhuhrPrayer = (currentPrayerIndex === 2);
   if (!(isFriday && isDhuhrPrayer)) {
-    try { var a = $('iqamaAudio'); if (a && a.play) a.play().catch(function (e) { }); } catch (e) { }
+    var iqama = document.getElementById('iqamaAudio');
+if (iqama) {
+  iqama.pause();
+  iqama.currentTime = 0;
+  iqama.load();               // إعادة تحميل لضمان الجاهزية
+  iqama.play().catch(function(e) {
+    console.log("خطأ تشغيل الإقامة: ", e);
+  });
+}
   }
 
   if (overlayTimeout) clearTimeout(overlayTimeout);
@@ -2194,8 +2215,6 @@ function cleanupClockAnimations() {
 
 
 
-// عناصر الوسائط
-var adhanAudio = document.getElementById('adhanAudio');
 
 // ✅ إصلاح دالة إنشاء الشاشة السوداء الاحتياطية
 function createCompatibleOverlay() {
@@ -2748,20 +2767,7 @@ function init() {
 
   cleanupClockAnimations();
 
-  // 8. تحميل الملفات الصوتية مسبقاً (تحسين للأداء)
-  setTimeout(function () {
-    try {
-      var adhanAudio = document.getElementById('adhanAudio');
-      var iqamaAudio = document.getElementById('iqamaAudio');
-      if (adhanAudio) adhanAudio.load();
-      if (iqamaAudio) iqamaAudio.load();
-      bellAudio = new Audio('audio/bell.mp3');
-      bellAudio.load();
-      console.log("✅ تم تحميل الملفات الصوتية بنجاح");
-    } catch (e) {
-      console.log("تحذير: مشكلة في تحميل الملفات الصوتية");
-    }
-  }, 2000);
+ 
 
   // 9. تشغيل عدادات الوقت (التحديث المستمر)
   clockInterval = setInterval(updateClockUI, 1000);
@@ -2940,9 +2946,7 @@ loadManifest(function () {
 
 // تشغيل الفحص بعد تحميل الصفحة بـ 3 ثواني
 setTimeout(debugAudioSystem, 3000);
-// نداء الدوال عند تحميل الصفحة لأول مرة
-loadSettings();
-updateHeaderAudioIcon();
+
 
 ////////////////////////////////////////////////////////////
 //////////////// دالة التحكم في الاعدادات من الموبايل ///////////////////
