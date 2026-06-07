@@ -141,7 +141,7 @@ var menuOpen = false;
 var isInit = false;
 var lastRenderedDay = -1; // ◀️ متغير جديد لمتابعة تغيير اليوم
 var lastDstActive = null;   // لمتابعة تغير حالة التوقيت الصيفي
-
+var isPrayerSequenceActive = false; // منع توفير الطاقة أثناء تسلسل الصلاة
 // === Announcement scheduler globals ===
 var ANNOUNCEMENT_STATES = {
   BEFORE_ADHAN: 'BEFORE_ADHAN',
@@ -170,6 +170,135 @@ var fastingImages = {
   thursday: 'image/fasting_thursday.jpg',
   whiteDays: 'image/fasting_white_days.jpg'
 };
+
+// === Phase tracking for sequence recovery ===
+var CURRENT_PHASE_KEY = 'MW_CURRENT_PHASE';
+var PHASES = {
+  CLOCK: 'CLOCK',
+  ADHAN: 'ADHAN',
+  IQAMA_COUNTDOWN: 'IQAMA_COUNTDOWN',
+  PRAYER_TIME: 'PRAYER_TIME',
+  AZKAR: 'AZKAR',
+  POST_PRAYER: 'POST_PRAYER'
+};
+var currentPhase = PHASES.CLOCK;
+var phaseData = {}; // Store additional data like prayer index, timestamps
+
+// === Phase management functions ===
+function saveCurrentPhase(phase, data) {
+  currentPhase = phase;
+  phaseData = data || {};
+  var saveData = {
+    phase: phase,
+    data: phaseData,
+    timestamp: new Date().getTime()
+  };
+  localStorage.setItem(CURRENT_PHASE_KEY, JSON.stringify(saveData));
+}
+
+function loadCurrentPhase() {
+  try {
+    var saved = localStorage.getItem(CURRENT_PHASE_KEY);
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      // Only restore if saved within last 24 hours
+      if (new Date().getTime() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+        currentPhase = parsed.phase;
+        phaseData = parsed.data || {};
+        phaseData.savedTimestamp = parsed.timestamp; // Store for resume calculation
+        return true;
+      }
+    }
+  } catch (e) {
+    console.log("Error loading phase:", e);
+  }
+  return false;
+}
+
+function clearCurrentPhase() {
+  currentPhase = PHASES.CLOCK;
+  phaseData = {};
+  localStorage.removeItem(CURRENT_PHASE_KEY);
+}
+
+// === Phase recovery function ===
+function resumeFromPhase() {
+  if (!phaseData.prayerIndex || phaseData.prayerIndex !== currentPrayerIndex) {
+    // Prayer index changed, can't resume
+    clearCurrentPhase();
+    return;
+  }
+
+  var now = new Date();
+  var prayerName = PRAYER_NAMES_AR[phaseData.prayerIndex];
+
+  switch (currentPhase) {
+    case PHASES.ADHAN:
+      // Resume adhan phase
+      var startTime = new Date(phaseData.startTime);
+      playAdhanAudioOnly(startTime);
+      break;
+
+    case PHASES.IQAMA_COUNTDOWN:
+      // Resume iqama countdown
+      var startTime = new Date(phaseData.startTime);
+      var elapsed = phaseData.elapsedSeconds || 0;
+      // Calculate how much time has passed since saved
+      var additionalElapsed = Math.floor((now.getTime() - phaseData.savedTimestamp) / 1000);
+      elapsed += additionalElapsed;
+      
+      if (elapsed < totalIqamaSeconds) {
+        // Still in countdown
+        elapsedAdhanSeconds = elapsed;
+        playAdhanAudioOnly(startTime);
+      } else {
+        // Move to prayer time
+        showPrayerNowCompatible();
+      }
+      break;
+
+    case PHASES.PRAYER_TIME:
+      // Resume prayer time
+      var startTime = new Date(phaseData.startTime);
+      showPrayerNowCompatible(startTime);
+      break;
+
+    case PHASES.AZKAR:
+      // Resume azkar if still active
+      if (SETTINGS.athkarEnabled === 'on') {
+        startAthkarCountdown();
+      }
+      break;
+
+    default:
+      clearCurrentPhase();
+      break;
+  }
+}
+
+// === Audio management functions ===
+function stopAllAudio() {
+  try {
+    var adhanAudio = document.getElementById('adhanAudio');
+    var iqamaAudio = document.getElementById('iqamaAudio');
+    var bellAudio = document.getElementById('bellAudio');
+    
+    if (adhanAudio) {
+      adhanAudio.pause();
+      adhanAudio.currentTime = 0;
+    }
+    if (iqamaAudio) {
+      iqamaAudio.pause();
+      iqamaAudio.currentTime = 0;
+    }
+    if (bellAudio) {
+      bellAudio.pause();
+      bellAudio.currentTime = 0;
+    }
+  } catch (e) {
+    console.log("Error stopping audio:", e);
+  }
+}
 
 //--------------- دالة تحديث سكريبت المواقيت بدون ريستارت ----------------------
 // تحديث بيانات المواقيت تلقائياً دون إعادة تحميل الصفحة
@@ -339,6 +468,51 @@ function pad2(n) { return (n < 10 ? '0' + n : '' + n); }
 function to12h(t) { if (!t || t.indexOf(':') === -1) return '--:--'; var p = t.split(':'); var hh = parseInt(p[0], 10), mm = ('0' + parseInt(p[1], 10)).slice(-2); var am = hh >= 12 ? '' : ''; var h = hh % 12; if (h === 0) h = 12; return h + ':' + mm + ' ' + am; }
 function hhmmToToday(hhmm) { var p = hhmm.split(':'); var d = new Date(); d.setHours(parseInt(p[0], 10), parseInt(p[1], 10), 0, 0); return d; }
 
+function setRemainingText(t) {
+  var el = $('remainingText') || $('remaining');
+  if (el) el.innerText = t;
+}
+function showPbar() {
+  var p = $('pbar');
+  if (p) { p.style.display = 'block'; p.style.width = '0%'; }
+}
+function hidePbar() {
+  var p = $('pbar');
+  if (p) { p.style.display = 'none'; p.style.width = '0%'; }
+}
+function updatePbar(pct) {
+  var p = $('pbar');
+  if (p) p.style.width = Math.min(100, Math.max(0, pct)) + '%';
+}
+
+var prepTotalSec = 0;
+function showPrepCountdown(seconds, label) {
+  prepTotalSec = seconds || 60;
+  var overlay = $('prepCountdown');
+  var num = $('prepNumber');
+  var labelEl = overlay ? overlay.querySelector('.prep-label') : null;
+  if (!overlay) return;
+  overlay.classList.add('active');
+  if (labelEl && label) labelEl.textContent = label;
+  if (num) num.textContent = Math.ceil(prepTotalSec);
+  updatePrepRing(prepTotalSec);
+}
+function updatePrepRing(remaining) {
+  var fg = document.querySelector('.prep-fg');
+  var num = $('prepNumber');
+  if (!fg) return;
+  if (num) num.textContent = Math.ceil(remaining);
+  var r = 88;
+  var circ = 2 * Math.PI * r;
+  var progress = Math.max(0, Math.min(1, remaining / prepTotalSec));
+  fg.setAttribute('stroke-dasharray', (circ * progress) + ' ' + circ);
+  if (progress <= 0) fg.setAttribute('stroke-dasharray', '0 ' + circ);
+}
+function hidePrepCountdown() {
+  var overlay = $('prepCountdown');
+  if (overlay) overlay.classList.remove('active');
+}
+
 // --- DST (summer time) helpers ---
 function getDSTMode() {
   try {
@@ -466,7 +640,7 @@ function getTodayKey() {
 
 function resumeCurrentState() {
   if (!TODAY_ADHAN_TIMES || !TODAY_ADHAN_TIMES.length) return;
-  var now = new Date();
+  var now = getAdjustedNow();
   var adhanTimes = TODAY_ADHAN_TIMES;
 
   var currentState = null;
@@ -474,7 +648,7 @@ function resumeCurrentState() {
   var prayerIndex = -1;
 
   for (var i = 0; i < adhanTimes.length; i++) {
-    if (i === 1) continue;
+    if (i === 1) continue; // تخطي الشروق
     var adhanTimeStr = adhanTimes[i];
     if (!adhanTimeStr || adhanTimeStr === '--:--') continue;
     var adhanDate = hhmmToToday(adhanTimeStr);
@@ -501,10 +675,13 @@ function resumeCurrentState() {
       stateStartTime = azkarStart;
       prayerIndex = i;
       break;
-    } else if (SETTINGS.fastingReminderEnabled === 'on') {
-      var fastingStart = azkarEnd;
+    } 
+    // ✅ إضافة حالة التذكير بالصيام (fasting)
+    else if (SETTINGS.fastingReminderEnabled === 'on') {
+      var fastingStart = azkarEnd;  // يبدأ بعد انتهاء الأذكار
       var fastingEnd = new Date(fastingStart.getTime() + (SETTINGS.fastingReminderDuration || 10) * 60000);
       if (nowTime >= fastingStart.getTime() && nowTime < fastingEnd.getTime()) {
+        // أسماء الصلوات المستخدمة في الإعدادات
         var prayerNames = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
         if (SETTINGS.fastingReminderPrayers[prayerNames[i]]) {
           currentState = 'fasting';
@@ -530,10 +707,15 @@ function resumeCurrentState() {
     showPrayerNowCompatible(stateStartTime);
   } else if (currentState === 'azkar') {
     showAthkarImage(stateStartTime);
-  } else if (currentState === 'fasting') {
+  } 
+  // ✅ معالجة حالة fasting
+  else if (currentState === 'fasting') {
     var reminderType = getFastingReminderType(getCurrentHijriDateWithOffset());
     if (reminderType) {
       showFastingReminderImage(reminderType, stateStartTime);
+    } else {
+      // إذا لم يكن هناك تذكير صالح (مثلاً ليس يوم صيام)، ننتقل مباشرة للصلاة التالية
+      updateNextPrayerAutomatically();
     }
   }
 }
@@ -924,7 +1106,7 @@ function getCurrentAnnouncementState() {
   if (!TODAY_ADHAN_TIMES || currentPrayerIndex < 0) {
     return ANNOUNCEMENT_STATES.BEFORE_ADHAN;
   }
-  var now = new Date();
+  var now = getAdjustedNow();
   var adhanDate = getPrayerDate(currentPrayerIndex);
   if (!adhanDate) {
     return ANNOUNCEMENT_STATES.BEFORE_ADHAN;
@@ -980,7 +1162,7 @@ function buildAnnouncementQueue(state) {
 }
 
 function getAvailableAnnouncementSeconds(state) {
-  var now = new Date();
+  var now = getAdjustedNow();
   if (state === ANNOUNCEMENT_STATES.BETWEEN_ADHAN_IQAMA) {
     var adhanDate = getPrayerDate(currentPrayerIndex);
     if (!adhanDate) return 0;
@@ -999,13 +1181,53 @@ function getAvailableAnnouncementSeconds(state) {
   return 0;
 }
 
+// متغير عام لحفظ الإعلانات التي تم عرضها في الدورة الحالية
+var displayedAnnouncementsInCycle = [];
+
 function findNextAnnouncementForAvailableTime(queue, availableSeconds) {
   for (var i = 0; i < queue.length; i++) {
-    if (queue[i].duration <= availableSeconds) {
-      return queue[i];
+    var ann = queue[i];
+    // تجاهل الإعلانات التي تم عرضها بالفعل في هذه الدورة
+    if (displayedAnnouncementsInCycle.indexOf(ann.id) !== -1) continue;
+    if (ann.duration <= availableSeconds) {
+      return ann;
     }
   }
   return null;
+}
+
+function startAnnouncementPlayback() {
+  var state = announcementState;
+  if (state !== ANNOUNCEMENT_STATES.BETWEEN_ADHAN_IQAMA && state !== ANNOUNCEMENT_STATES.AFTER_AZKAR) {
+    // عند تغيير الحالة، أفرغ قائمة الإعلانات المعروضة
+    displayedAnnouncementsInCycle = [];
+    return;
+  }
+  if (announcementActive) return;
+  if (announcementLastEndTime) {
+    var sinceEnd = Math.floor((new Date().getTime() - announcementLastEndTime.getTime()) / 1000);
+    if (sinceEnd < announcementCooldownSeconds) return;
+  }
+
+  var queue = buildAnnouncementQueue(state);
+  if (queue.length === 0) {
+    displayedAnnouncementsInCycle = []; // إفراغ عند عدم وجود إعلانات
+    return;
+  }
+
+  var availableSeconds = getAvailableAnnouncementSeconds(state);
+  if (availableSeconds <= 0) return;
+
+  var nextAnnouncement = findNextAnnouncementForAvailableTime(queue, availableSeconds);
+  if (!nextAnnouncement) {
+    // لا يوجد إعلانات مناسبة للوقت المتبقي، نعيد ضبط القائمة
+    displayedAnnouncementsInCycle = [];
+    return;
+  }
+
+  // إضافة الإعلان إلى قائمة المعروضة
+  displayedAnnouncementsInCycle.push(nextAnnouncement.id);
+  showAnnouncement(nextAnnouncement);
 }
 
 function showAnnouncement(announcement) {
@@ -1058,45 +1280,23 @@ function hideAnnouncementScreen() {
   if (media) media.innerHTML = '';
 }
 
-function startAnnouncementPlayback() {
-  var state = announcementState;
-  if (state !== ANNOUNCEMENT_STATES.BETWEEN_ADHAN_IQAMA && state !== ANNOUNCEMENT_STATES.AFTER_AZKAR) {
-    return;
-  }
-  if (announcementActive) {
-    return;
-  }
-  if (announcementLastEndTime) {
-    var sinceEnd = Math.floor((new Date().getTime() - announcementLastEndTime.getTime()) / 1000);
-    if (sinceEnd < announcementCooldownSeconds) {
-      return;
-    }
-  }
-  var queue = buildAnnouncementQueue(state);
-  if (queue.length === 0) {
-    return;
-  }
-  var availableSeconds = getAvailableAnnouncementSeconds(state);
-  if (availableSeconds <= 0) {
-    return;
-  }
-  var nextAnnouncement = findNextAnnouncementForAvailableTime(queue, availableSeconds);
-  if (!nextAnnouncement) {
-    return;
-  }
-  showAnnouncement(nextAnnouncement);
-}
+
 
 function updateAnnouncementStateAndSchedule() {
   var newState = getCurrentAnnouncementState();
   if (newState !== announcementState) {
     announcementState = newState;
+    // ✅ عند الدخول إلى فترة مسموحة (جديدة)، أفرغ قائمة الإعلانات المعروضة
+    if (newState === ANNOUNCEMENT_STATES.BETWEEN_ADHAN_IQAMA || newState === ANNOUNCEMENT_STATES.AFTER_AZKAR) {
+      displayedAnnouncementsInCycle = [];
+    }
   }
   if (announcementActive && newState !== ANNOUNCEMENT_STATES.BETWEEN_ADHAN_IQAMA && newState !== ANNOUNCEMENT_STATES.AFTER_AZKAR) {
     hideAnnouncementScreen();
     announcementActive = false;
   }
   if ((newState === ANNOUNCEMENT_STATES.BETWEEN_ADHAN_IQAMA || newState === ANNOUNCEMENT_STATES.AFTER_AZKAR) && !announcementActive) {
+    // ✅ لا تفرغ القائمة هنا، بل اتركها تتراكم
     startAnnouncementPlayback();
   }
 }
@@ -1104,16 +1304,21 @@ function updateAnnouncementStateAndSchedule() {
 // ✅ 1. دالة تبديل الكتم (المحرك)
 function toggleMute() {
   isAdhanMuted = !isAdhanMuted;
-  // حفظ الحالة في إعدادات التطبيق دون استدعاء saveSettings
-  SETTINGS.isAdhanMuted = isAdhanMuted;
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
-  
+
+  if (typeof SETTINGS !== 'undefined') {
+    SETTINGS.isAdhanMuted = isAdhanMuted;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
+  }
+
+  // ✅ لازم الـ ID هنا يكون muteAdhanBtn عشان يطابق الـ HTML
   var btn = document.getElementById('muteAdhanBtn');
   if (btn) {
     btn.innerHTML = isAdhanMuted ? "وضع الكتم: مشغل (جرس) 🔔" : "وضع الصوت: مشغل (أذان) 🔊";
     btn.style.backgroundColor = isAdhanMuted ? "#840101" : "#2e7d32";
   }
+
   updateHeaderAudioIcon();
+
 }
 // ✅ 2. دالة تحديث الأيقونة (العرض)
 function updateHeaderAudioIcon() {
@@ -1353,8 +1558,9 @@ function renderTimes() {
   if (!TIMES_OBJ || Object.keys(TIMES_OBJ).length === 0) { container.innerHTML = '<div class="small">لا توجد بيانات مواقيت لهذا اليوم.</div>'; return; }
   var d = new Date(); var mm = pad2(d.getMonth() + 1); var dd = pad2(d.getDate()); var key = mm + '-' + dd;
   var line = TIMES_OBJ[key];
-  if (!line) { container.innerHTML = '<div class="small">لا توجد بيانات لليوم ' + key + '</div>'; setStatus('لا بيانات لليوم ' + key); $('remaining').innerText = 'المتبقي للأذان القادم: --:--:--'; return; }
+  if (!line) { container.innerHTML = '<div class="small">لا توجد بيانات لليوم ' + key + '</div>'; setStatus('لا بيانات لليوم ' + key); setRemainingText('المتبقي للأذان القادم: --:--:--'); return; }
   var parts = getAdjustedPrayerTimes(line);
+  var dstMode_now = getDSTMode();
   TODAY_ADHAN_TIMES = parts.map(function (t) { return adjustTimeForDST(t, dstMode_now); });
 
   // ◀️ تحديث اليوم الأخير الذي تم عرضه
@@ -1365,8 +1571,6 @@ function renderTimes() {
   if (d.getDay() === 5) {
     labels[2] = 'الجمعة';
   }
-
-  var dstMode_now = getDSTMode();
 
   for (var i = 0; i < labels.length; i++) {
     var div = document.createElement('div');
@@ -1384,7 +1588,7 @@ function renderTimes() {
     // العمود الثاني: اسم الصلاة (الوسط) - أبيض
     var prayerName = document.createElement('div');
     prayerName.className = 'col name';
-    prayerName.innerText = labels[i];
+    prayerName.innerHTML = labels[i];
     prayerName.id = 'name_' + i;
 
     // العمود الثالث: وقت الإقامة (اليسار) - لون اصفر
@@ -1418,13 +1622,17 @@ function renderTimes() {
 // ✅ تحسين دالة الهايلايت المعدلة لتكون أكثر دقة
 // دالة مساعدة: إرجاع الوقت الحالي المعدل (المتوافق مع الساعة الكبيرة)
 function getAdjustedNow() {
-  var now = new Date();                      // وقت النظام الحقيقي
-  var adj = getAdjustedTime(now);            // {hours, minutes, seconds} المعدلة
-  var originalTotalMinutes = now.getHours() * 60 + now.getMinutes();
-  var adjustedTotalMinutes = adj.hours * 60 + adj.minutes;
-  var diffMinutes = adjustedTotalMinutes - originalTotalMinutes;
-  // إنشاء كائن تاريخ جديد مع إزاحة الدقائق (يحافظ على اليوم والتاريخ عند تجاوز منتصف الليل)
-  return new Date(now.getTime() + diffMinutes * 60 * 1000);
+  var now = new Date();
+  var adj = getAdjustedTime(now);
+  return new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    adj.hours,
+    adj.minutes,
+    adj.seconds,
+    0
+  );
 }
 
 // دالة highlightNext المعدلة
@@ -1443,7 +1651,7 @@ function highlightNext(parts) {
     var dt = hhmmToToday(t);
     var nowTime = now.getTime();
     var prayerTime = dt.getTime();
-    if (prayerTime <= nowTime) {
+    if (prayerTime < nowTime) {
       dt.setDate(dt.getDate() + 1);
       prayerTime = dt.getTime();
     }
@@ -1457,18 +1665,35 @@ function highlightNext(parts) {
     var highlightedRow = $('row_' + nextIdx);
     if (highlightedRow) highlightedRow.className = 'prRow highlight';
     startCountdownToNextPrayer(nextDT);
+    // Set phase to clock when highlighting next prayer
+    saveCurrentPhase(PHASES.CLOCK, { prayerIndex: nextIdx });
   } else {
-    var remainingEl = $('remaining');
-    if (remainingEl) remainingEl.innerText = 'المتبقي للأذان القادم: --:--:--';
+    setRemainingText('المتبقي للأذان القادم: --:--:--');
+    hidePbar();
   }
 }
 // ✅ تحسين دالة العد التنازلي المعدلة للصلاة القادمة
 function startCountdownToNextPrayer(nextDT) {
   if (countdownInterval) clearInterval(countdownInterval);
+  hidePrepCountdown();
+  var nowReal = new Date();
+  var adj = getAdjustedTime(nowReal);
+  var nowVirtual = new Date(
+    nowReal.getFullYear(),
+    nowReal.getMonth(),
+    nowReal.getDate(),
+    adj.hours,
+    adj.minutes,
+    adj.seconds,
+    0
+  );
+  var totalDuration = nextDT.getTime() - nowVirtual.getTime();
+  var prepShown = false;
+  showPbar();
+
   countdownInterval = setInterval(function () {
     var nowReal = new Date();
     var adj = getAdjustedTime(nowReal);
-    // تاريخ وهمي يمثل الوقت الظاهر على الساعة الكبيرة
     var nowVirtual = new Date(
       nowReal.getFullYear(),
       nowReal.getMonth(),
@@ -1482,13 +1707,28 @@ function startCountdownToNextPrayer(nextDT) {
     if (diff <= 0) {
       clearInterval(countdownInterval);
       countdownInterval = null;
+      hidePrepCountdown();
+      updatePbar(100);
+      saveCurrentPhase(PHASES.ADHAN, { prayerIndex: currentPrayerIndex });
       playAdhanAudioOnly();
     } else {
       var h = Math.floor(diff / 3600000);
       var m = Math.floor((diff % 3600000) / 60000);
       var s = Math.floor((diff % 60000) / 1000);
-      var remainingEl = $('remaining');
-      if (remainingEl) remainingEl.innerText = 'المتبقي للأذان القادم: ' + pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+      setRemainingText('المتبقي للأذان القادم: ' + pad2(h) + ':' + pad2(m) + ':' + pad2(s));
+      if (totalDuration > 0) updatePbar(((totalDuration - diff) / totalDuration) * 100);
+      // عداد 60 ثانية
+      var secs = Math.ceil(diff / 1000);
+      if (secs <= 60 && secs > 0) {
+        if (!prepShown) {
+          prepShown = true;
+          showPrepCountdown(60, 'الأذان بعد');
+        }
+        updatePrepRing(secs);
+      } else if (prepShown && secs > 60) {
+        prepShown = false;
+        hidePrepCountdown();
+      }
     }
   }, 1000);
 }
@@ -1566,6 +1806,34 @@ function updateAdhanOverlayCounter(counterText) {
   }
 }
 
+// ✅ دالة تشغيل صوت مع إعادة محاولة (متوافقة مع KitKat)
+function retryPlayAudio(audioEl, maxRetries) {
+  if (!audioEl) return;
+  var retries = 0;
+  function attempt() {
+    try {
+      audioEl.currentTime = 0;
+      var result = audioEl.play();
+      if (result && typeof result.catch === 'function') {
+        result.catch(function () { retry(); });
+        return;
+      }
+    } catch (e) {}
+    setTimeout(function () {
+      if (audioEl.paused) {
+        retry();
+      }
+    }, 1000);
+  }
+  function retry() {
+    retries++;
+    if (retries < maxRetries) {
+      setTimeout(attempt, 400);
+    }
+  }
+  attempt();
+}
+
 // ✅ دالة جديدة لإخفاء الشاشة السوداء
 function hideAdhanOverlay() {
   try {
@@ -1581,6 +1849,8 @@ function hideAdhanOverlay() {
       marq.style.display = 'block';
     }
 
+    hidePrepCountdown();
+
     console.log("✅ تم إخفاء الشاشة السوداء");
   } catch (e) {
     console.log("❌ خطأ في إخفاء الشاشة السوداء:", e);
@@ -1595,13 +1865,28 @@ function playAdhanAudioOnly(optionalStartTime) {
   if (currentPrayerIndex === undefined || currentPrayerIndex === -1) return;
   var prayerName = PRAYER_NAMES_AR[currentPrayerIndex];
   if (!prayerName) return;
+  hidePbar();
 
+  // Stop all previous audio and intervals
+  stopAllAudio();
   if (iqamaCountdownInterval) clearInterval(iqamaCountdownInterval);
   if (adhanPlayingInterval) clearInterval(adhanPlayingInterval);
+  if (overlayTimeout) { clearTimeout(overlayTimeout); overlayTimeout = null; }
   iqamaCountdownInterval = null;
   adhanPlayingInterval = null;
 
-  var now = new Date();
+  // Save phase
+  saveCurrentPhase(PHASES.ADHAN, {
+    prayerIndex: currentPrayerIndex,
+    startTime: optionalStartTime ? optionalStartTime.getTime() : new Date().getTime()
+  });
+
+  // منع توفير الطاقة أثناء تسلسل الصلاة
+  isPrayerSequenceActive = true;
+  stopHdmiKeepOffLoop();
+  turnScreenOn();
+
+  var now = getAdjustedNow();
   var isFriday = (now.getDay() === 5);
   var isFridayDhuhr = (isFriday && currentPrayerIndex === 2);
 
@@ -1622,10 +1907,25 @@ function playAdhanAudioOnly(optionalStartTime) {
   var adhanAlreadyFinished = (elapsedAdhanSeconds >= ADHAN_DURATION_SECONDS);
 
   if (totalIqamaSeconds > 0) {
+    var iqamaPrepShown = false;
     updateIqamaCountdown();
     iqamaCountdownInterval = setInterval(function () {
       elapsedAdhanSeconds++;
       updateIqamaCountdown();
+
+      // prep countdown for iqama
+      var remSecs = totalIqamaSeconds - elapsedAdhanSeconds;
+      if (remSecs <= 60 && remSecs > 0) {
+        if (!iqamaPrepShown) {
+          iqamaPrepShown = true;
+          showPrepCountdown(60, 'الإقامة بعد');
+        }
+        updatePrepRing(remSecs);
+      } else if (iqamaPrepShown && remSecs > 60) {
+        iqamaPrepShown = false;
+        hidePrepCountdown();
+      }
+      if (remSecs <= 0) hidePrepCountdown();
 
       if (elapsedAdhanSeconds === ADHAN_DURATION_SECONDS && !adhanAlreadyFinished) {
         if (isFridayDhuhr && SETTINGS.fridaySermonEnabled === 'on') {
@@ -1635,6 +1935,12 @@ function playAdhanAudioOnly(optionalStartTime) {
         } else {
           hideAdhanOverlay();
         }
+        // Update phase to iqama countdown
+        saveCurrentPhase(PHASES.IQAMA_COUNTDOWN, {
+          prayerIndex: currentPrayerIndex,
+          startTime: startTime.getTime(),
+          elapsedSeconds: elapsedAdhanSeconds
+        });
       }
 
       if (elapsedAdhanSeconds >= totalIqamaSeconds) {
@@ -1662,37 +1968,18 @@ function playAdhanAudioOnly(optionalStartTime) {
     }, remainingAdhan * 1000);
   }
 
-   if (elapsedAdhanSeconds < ADHAN_DURATION_SECONDS) {
-    // أوقف أي تشغيل سابق وأعد ضبط الوقت
-    var adhan = document.getElementById('adhanAudio');
-    var bell = document.getElementById('bellAudio');
-    
-    if (adhan) {
-      adhan.pause();
-      adhan.currentTime = 0;
-    }
-    if (bell) {
-      bell.pause();
-      bell.currentTime = 0;
-    }
-
-    if (isAdhanMuted) {
-      // تشغيل الجرس
-      if (bell) {
-        bell.load();   // إعادة تحميل المصدر لضمان الجاهزية
-        bell.play().catch(function(e) {
-          console.log("خطأ تشغيل الجرس: ", e);
-        });
-      }
-    } else {
-      // تشغيل الأذان
-      if (adhan) {
-        adhan.load();
-        adhan.play().catch(function(e) {
-          console.log("خطأ تشغيل الأذان: ", e);
-        });
-      }
-    }
+  if (elapsedAdhanSeconds < ADHAN_DURATION_SECONDS) {
+    setTimeout(function () {
+      try {
+        var adhanAudio = new Audio('audio/adhan.mp3');
+        var bellAudio = new Audio('audio/bell.mp3');
+        if (isAdhanMuted) {
+          if (bellAudio) { bellAudio.volume = 1; retryPlayAudio(bellAudio, 5); }
+        } else {
+          if (adhanAudio) { adhanAudio.volume = 1; retryPlayAudio(adhanAudio, 5); }
+        }
+      } catch (e) { }
+    }, 0);
   }
 }
 // ✅ دالة جديدة لتحديث العد التنازلي للإقامة
@@ -1700,8 +1987,7 @@ function updateIqamaCountdown() {
   if (totalIqamaSeconds <= 0) return;
   var remainingSeconds = totalIqamaSeconds - elapsedAdhanSeconds;
   if (remainingSeconds < 0) remainingSeconds = 0;
-  var remainingEl = $('remaining');
-  if (remainingEl) remainingEl.innerText = 'المتبقي للإقامة: ' + formatTime(remainingSeconds);
+  setRemainingText('المتبقي للإقامة: ' + formatTime(remainingSeconds));
   var overlayCounter = $('overlayCounter');
   if (overlayCounter && overlayCounter.style.display !== 'none') {
     var minutesLeft = Math.floor(remainingSeconds / 60);
@@ -1714,9 +2000,7 @@ function startIqamaCountdownFromAdhanStart(totalIqamaSeconds, elapsedSeconds) {
   var remainingSeconds = totalIqamaSeconds - elapsedSeconds;
 
   // ✅ تحديث النص الرئيسي
-  if ($('remaining')) {
-    $('remaining').innerText = 'المتبقي للإقامة: ' + formatTime(remainingSeconds);
-  }
+  setRemainingText('المتبقي للإقامة: ' + formatTime(remainingSeconds));
 
   console.log("⏳ بدأ العد التنازلي للإقامة: " + remainingSeconds + " ثانية متبقية");
 }
@@ -1726,9 +2010,18 @@ function startIqamaCountdownFromAdhanStart(totalIqamaSeconds, elapsedSeconds) {
 /////////////////////////////////////////////////////////////////////
 // ✅ إصلاح دالة عرض شاشة الصلاة الآن
 function showPrayerNowCompatible(optionalStartTime) {
-  $('remaining').innerText = 'الصلاة الآن - فضلاً الهدوء';
+  // Stop all previous audio and intervals
+  stopAllAudio();
   if (iqamaCountdownInterval) { clearInterval(iqamaCountdownInterval); iqamaCountdownInterval = null; }
   if (adhanPlayingInterval) { clearInterval(adhanPlayingInterval); adhanPlayingInterval = null; }
+
+  // Save phase
+  saveCurrentPhase(PHASES.PRAYER_TIME, {
+    prayerIndex: currentPrayerIndex,
+    startTime: optionalStartTime ? optionalStartTime.getTime() : new Date().getTime()
+  });
+
+  setRemainingText('الصلاة الآن - فضلاً الهدوء');
   showAdhanOverlay(' الصلاة الآن', 'فضلاً الهدوء');
 
   var now = new Date();
@@ -1744,15 +2037,7 @@ function showPrayerNowCompatible(optionalStartTime) {
   var isFriday = (now.getDay() === 5);
   var isDhuhrPrayer = (currentPrayerIndex === 2);
   if (!(isFriday && isDhuhrPrayer)) {
-    var iqama = document.getElementById('iqamaAudio');
-if (iqama) {
-  iqama.pause();
-  iqama.currentTime = 0;
-  iqama.load();               // إعادة تحميل لضمان الجاهزية
-  iqama.play().catch(function(e) {
-    console.log("خطأ تشغيل الإقامة: ", e);
-  });
-}
+    try { var a = $('iqamaAudio'); if (a) { retryPlayAudio(a, 5); } } catch (e) { }
   }
 
   if (overlayTimeout) clearTimeout(overlayTimeout);
@@ -1769,6 +2054,7 @@ if (iqama) {
 function updateNextPrayerAutomatically() {
   if (!TIMES_OBJ) {
     console.log("لا توجد بيانات مواقيت");
+    setStatus('لا توجد بيانات مواقيت');
     return;
   }
 
@@ -1777,26 +2063,40 @@ function updateNextPrayerAutomatically() {
   var dd = pad2(d.getDate());
   var key = mm + '-' + dd;
   var line = TIMES_OBJ[key];
-
-  if (line) {
-    var parts = getAdjustedPrayerTimes(line);
-
-    console.log("جاري تحديث الصلاة التالية...");
-
-    // ✅ نعيد تعيين المؤشر ونجدد البحث عن الصلاة التالية
-    currentPrayerIndex = -1;
-    highlightNext(parts);
-
-    // ✅ نضمن تحديث الهايلايت بشكل صحيح
-    setTimeout(function () {
-      highlightNext(parts);
-    }, 100);
-
-    setStatus('تم الانتقال تلقائياً للصلاة التالية');
-  } else {
-    console.log("لا توجد بيانات لليوم: " + key);
-    setStatus('لا توجد بيانات للانتقال التلقائي');
+  if (!line) {
+    // جرب اليوم التالي إذا لم يجد بيانات اليوم
+    d.setDate(d.getDate() + 1);
+    mm = pad2(d.getMonth() + 1);
+    dd = pad2(d.getDate());
+    key = mm + '-' + dd;
+    line = TIMES_OBJ[key];
+    if (!line) {
+      setStatus('لا توجد بيانات لليوم الحالي أو التالي');
+      return;
+    }
   }
+
+  var parts = getAdjustedPrayerTimes(line);
+  console.log("تحديث الصلاة التالية، الأجزاء:", parts);
+  
+  // إعادة تعيين المؤشر بشكل صريح
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = null;
+  
+  currentPrayerIndex = -1;
+  highlightNext(parts);
+  
+  // تأكيد إعادة تشغيل العدادات بعد ثانية
+  setTimeout(function() {
+    if (!countdownInterval && currentPrayerIndex !== -1) {
+      console.log("إعادة محاولة بدء العد التنازلي");
+      var todayKey = pad2(new Date().getMonth()+1)+'-'+pad2(new Date().getDate());
+      var freshParts = getAdjustedPrayerTimes(TIMES_OBJ[todayKey]);
+      highlightNext(freshParts);
+    }
+  }, 500);
+  
+  setStatus('تم الانتقال للصلاة التالية');
 }
 
 // --- Clock & UI Updates ---
@@ -2055,6 +2355,7 @@ function splitHijriDateManual(hijriString) {
 // 🔧 تحسين وضع توفير الطاقة - يعمل فقط في أوقات الصلوات المحددة
 function checkEnergySavingMode() {
   if (SETTINGS.energySaving === 'off' || !TIMES_OBJ) return;
+  if (isPrayerSequenceActive) return;
 
   var now = getAdjustedNow();
   var mm = pad2(now.getMonth() + 1);
@@ -2158,10 +2459,10 @@ function applyEnergySaving(isEnergySaving) {
   try {
     if (isEnergySaving) {
       document.body.classList.add('low-power-mode');
-      turnScreenOff();     // ← هنا بيطفي الباكلايت فعليًا
+      turnScreenOff();
     } else {
       document.body.classList.remove('low-power-mode');
-      turnScreenOn();      // ← هنا بيشغله تاني
+      turnScreenOn();
     }
   } catch (e) {
     console.log('Error in energy saving:', e);
@@ -2215,6 +2516,8 @@ function cleanupClockAnimations() {
 
 
 
+// عناصر الوسائط
+var adhanAudio = document.getElementById('adhanAudio');
 
 // ✅ إصلاح دالة إنشاء الشاشة السوداء الاحتياطية
 function createCompatibleOverlay() {
@@ -2292,39 +2595,6 @@ function hideCompatibleOverlay() {
 
 
 
-// دالة حفظ إعدادات الصوت
-function saveAudioSettings() {
-  try {
-    var audioSettings = {
-      isAdhanMuted: isAdhanMuted
-    };
-    localStorage.setItem('MW_AUDIO_SETTINGS', JSON.stringify(audioSettings));
-  } catch (e) { }
-}
-
-// دالة تحميل إعدادات الصوت
-function loadAudioSettings() {
-  try {
-    var s = localStorage.getItem('MW_AUDIO_SETTINGS');
-    if (s) {
-      var audioSettings = JSON.parse(s);
-      isAdhanMuted = audioSettings.isAdhanMuted;
-
-      // تحديث حالة الزر
-      var muteBtn = $('muteAdhanBtn');
-      if (muteBtn) {
-        if (isAdhanMuted) {
-          muteBtn.innerHTML = '🔇صوت الأذان مكتوم ';
-          muteBtn.classList.add('muted');
-        } else {
-          muteBtn.innerHTML = '🔊صوت الأذان مفعل';
-          muteBtn.classList.remove('muted');
-        }
-
-      }
-    }
-  } catch (e) { }
-}
 ///////////////////////////////////////////
 ////دالة الاذكار بعد الصلاة /////////
 // ◀️ دالة عرض صورة الأذكار
@@ -2345,6 +2615,7 @@ function showAthkarImage(optionalStartTime) {
   img.style.cssText = 'width:100vw;height:100vh;object-fit:contain;z-index:10001;';
   img.alt = 'أذكار بعد الصلاة';
   imgOverlay.appendChild(img);
+  imgOverlay.onclick = function () { hideAthkarImage(); };
   document.body.appendChild(imgOverlay);
 
   var now = new Date();
@@ -2367,22 +2638,46 @@ function showAthkarImage(optionalStartTime) {
 
 // دالة إخفاء صورة الأذكار
 function hideAthkarImage() {
-  var overlay = document.getElementById('athkarOverlay');
-  if (overlay) {
-    document.body.removeChild(overlay);
+   // إلغاء أي مؤقتات مرتبطة (لمنع الاستدعاء المزدوج)
+  if (window._athkarHideTimeout) {
+    clearTimeout(window._athkarHideTimeout);
+    window._athkarHideTimeout = null;
   }
 
+  var overlay = document.getElementById('athkarOverlay');
+  if (overlay && overlay.parentNode) {
+    overlay.parentNode.removeChild(overlay);
+  }
   if (athkarTimeout) {
     clearTimeout(athkarTimeout);
     athkarTimeout = null;
   }
-
-  // إعادة العرض الرئيسي
+  // إعادة العرض
   hideMainDisplay(false);
-
-  // إعادة إظهار الشريط المتحرك
   var ticker = document.getElementById('ticker');
   if (ticker) ticker.style.display = 'block';
+  
+  // ✅ إعادة تهيئة كاملة
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = null;
+  
+  // إعادة حساب الصلاة التالية
+  if (TIMES_OBJ) {
+    var d = new Date();
+    var mm = pad2(d.getMonth() + 1);
+    var dd = pad2(d.getDate());
+    var key = mm + '-' + dd;
+    var line = TIMES_OBJ[key];
+    if (line) {
+      var parts = getAdjustedPrayerTimes(line);
+      highlightNext(parts);
+    } else {
+      setStatus('خطأ: لا توجد بيانات لليوم');
+    }
+  } else {
+    setStatus('TIMES_OBJ غير معرف');
+  }
+  updateNextPrayerAutomatically();
 }
 
 
@@ -2417,15 +2712,32 @@ function hideMainDisplay(hide) {
 // ◀️ دالة بدء العد لعرض الأذكار
 function startAthkarCountdown() {
   if (SETTINGS.athkarEnabled !== 'on') return;
-  if (athkarTimeout) clearTimeout(athkarTimeout); // ✅ مسح أي مؤقت سابق
+  
+  // إلغاء أي مؤتمر أذكار سابق (لضمان عدم تداخل)
+  if (athkarTimeout) {
+    clearTimeout(athkarTimeout);
+    athkarTimeout = null;
+  }
+  // إلغاء أي مؤتمر ثانوي (مهم)
+  if (window._athkarHideTimeout) {
+    clearTimeout(window._athkarHideTimeout);
+    window._athkarHideTimeout = null;
+  }
+
+  // حفظ الحالة
+  saveCurrentPhase(PHASES.AZKAR, { prayerIndex: currentPrayerIndex });
+
   var delay = (SETTINGS.athkarDelay || 0) * 60000;
   athkarTimeout = setTimeout(function () {
     showAthkarImage();
-    var athkarDuration = (SETTINGS.athkarDuration || 10) * 60000; // ✅ استخدام مؤقت منفصل لإخفاء الأذكار ثم التحقق من التذكير
-    setTimeout(function () {
-      hideAthkarImage();// إخفاء الأذكار قبل التحقق من التذكير (إذا لم تخف تلقائياً)
+    var athkarDuration = (SETTINGS.athkarDuration || 10) * 60000;
+    // تخزين المؤقت الثاني في متغير عام
+    window._athkarHideTimeout = setTimeout(function () {
+      hideAthkarImage();
       checkFastingReminder();
+      window._athkarHideTimeout = null;
     }, athkarDuration);
+    athkarTimeout = null;
   }, delay);
 }
 ////////////////////////////////////////////////////////////
@@ -2442,32 +2754,14 @@ function checkFastingReminder() {
     return;
   }
 
-  // حساب الصلاة الحالية بناءً على الوقت الحقيقي
-  var now = new Date();
+  // حساب الصلاة الحالية بناءً على currentPrayerIndex
   var prayerNames = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   var currentPrayer = null;
-
-  if (TIMES_OBJ) {
-    var mm = pad2(now.getMonth() + 1);
-    var dd = pad2(now.getDate());
-    var key = mm + '-' + dd;
-    var line = TIMES_OBJ[key];
-    if (line) {
-      var parts = getAdjustedPrayerTimes(line);
-      var dstMode = getDSTMode();
-      for (var i = 0; i < parts.length; i++) {
-        if (i === 1) continue; // تخطي الشروق
-        var t = adjustTimeForDST(parts[i], dstMode);
-        if (!t || t === '--:--') continue;
-        var prayerTime = hhmmToToday(t);
-        var endTime = new Date(prayerTime.getTime() + (getIqamaMinutes(i) * 60000) + (SETTINGS.prayNowMinutes * 60000));
-        if (now >= prayerTime && now <= endTime) {
-          currentPrayer = prayerNames[i];
-          break;
-        }
-      }
-    }
-  }
+  if (currentPrayerIndex === 0) currentPrayer = 'fajr';
+  else if (currentPrayerIndex === 2) currentPrayer = 'dhuhr';
+  else if (currentPrayerIndex === 3) currentPrayer = 'asr';
+  else if (currentPrayerIndex === 4) currentPrayer = 'maghrib';
+  else if (currentPrayerIndex === 5) currentPrayer = 'isha';
 
   if (!currentPrayer || !SETTINGS.fastingReminderPrayers[currentPrayer]) {
     return; // لا تذكير في هذه الصلاة
@@ -2527,13 +2821,18 @@ function getFastingReminderType(hijriDate) {
     return 'whiteDays'; // الأيام البيض
   }
 
-  // التحقق من تذكير الإثنين (يوم الأحد)
-  if (weekday === 0) { // الأحد
+  // استخدام يوم الغد لتحديد تذكير الصيام الصحيح
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var tomorrowWeekday = tomorrow.getDay(); // 0=الأحد, 1=الإثنين, 2=الثلاثاء, 3=الأربعاء, 4=الخميس
+
+  // تذكير بصيام غداً الاثنين
+  if (tomorrowWeekday === 1) { // يوم الغد هو الاثنين
     return 'monday';
   }
 
-  // التحقق من تذكير الخميس (يوم الأربعاء)
-  if (weekday === 3) { // الأربعاء
+  // تذكير بصيام غداً الخميس
+  if (tomorrowWeekday === 4) { // يوم الغد هو الخميس
     return 'thursday';
   }
 
@@ -2558,6 +2857,7 @@ function showFastingReminderImage(type, optionalStartTime) {
   img.style.cssText = 'width:100vw;height:100vh;object-fit:contain;z-index:10001;';
   img.alt = 'تذكير بالصيام';
   imgOverlay.appendChild(img);
+  imgOverlay.onclick = function () { hideFastingReminderImage(); };
   document.body.appendChild(imgOverlay);
 
   var now = new Date();
@@ -2592,6 +2892,9 @@ function hideFastingReminderImage() {
   hideMainDisplay(false);
   var ticker = document.getElementById('ticker');
   if (ticker) ticker.style.display = 'block';
+
+  // إعادة تشغيل العداد للصلاة القادمة
+  updateNextPrayerAutomatically();
 }
 
 // ◀️ دالة الكشف عن الدقة وتطبيق إعدادات خاصة
@@ -2733,12 +3036,16 @@ function init() {
 
   // 5. تحميل الإعدادات والبيانات
   loadSettings();
-  checkRemoteUpdate(); // هنا يتم استدعاء التحميل من الموبايل 
   updateMosqueName();
   loadManifest(function () { populateCountries(); });
-  loadAudioSettings();
   renderAnnouncementAdmin();
   updateAnnouncementMediaFieldVisibility();
+
+  // 5.5. Phase recovery - resume from saved state if available
+  if (loadCurrentPhase()) {
+    console.log("Resuming from phase:", currentPhase);
+    resumeFromPhase();
+  }
 
   // حساب حالة DST الفعلية المطبقة على الساعة (لا تُستخدم في وضع auto)
   var currentDst = false;
@@ -2767,7 +3074,20 @@ function init() {
 
   cleanupClockAnimations();
 
- 
+  // 8. تحميل الملفات الصوتية مسبقاً (تحسين للأداء)
+  setTimeout(function () {
+    try {
+      var adhanAudio = document.getElementById('adhanAudio');
+      var iqamaAudio = document.getElementById('iqamaAudio');
+      if (adhanAudio) adhanAudio.load();
+      if (iqamaAudio) iqamaAudio.load();
+      var bellAudioEl = document.getElementById('bellAudio');
+      if (bellAudioEl) bellAudioEl.load();
+      console.log("✅ تم تحميل الملفات الصوتية بنجاح");
+    } catch (e) {
+      console.log("تحذير: مشكلة في تحميل الملفات الصوتية");
+    }
+  }, 2000);
 
   // 9. تشغيل عدادات الوقت (التحديث المستمر)
   clockInterval = setInterval(updateClockUI, 1000);
@@ -2791,6 +3111,21 @@ function init() {
   if (resetBtn) {
     resetBtn.onclick = resetToDefaultSettings;
   }
+
+  // ربط زر اختبار الصوت
+  var testBtn = $('testAudioBtn');
+  if (testBtn) {
+    testBtn.onclick = testAudio;
+  }
+
+  // النقر خارج القائمة الجانبية لإغلاقها
+  document.addEventListener('click', function (e) {
+    var sm = $('sideMenu');
+    var mb = $('menuBtn');
+    if (sm && sm.classList.contains('active') && !sm.contains(e.target) && mb && !mb.contains(e.target)) {
+      closeSideMenu();
+    }
+  });
 
 
   // دالة داخلية لإصلاح شريط الأخبار
@@ -2946,80 +3281,10 @@ loadManifest(function () {
 
 // تشغيل الفحص بعد تحميل الصفحة بـ 3 ثواني
 setTimeout(debugAudioSystem, 3000);
+// نداء الدوال عند تحميل الصفحة لأول مرة
+loadSettings();
+updateHeaderAudioIcon();
 
-
-////////////////////////////////////////////////////////////
-//////////////// دالة التحكم في الاعدادات من الموبايل ///////////////////
-///////////////////////////////////////////////////////////
-var lastRemoteUpdate = 0;
-
-function checkRemoteUpdate() {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "http://192.168.43.1:8080/remote_settings.json?t=" + new Date().getTime(), true);
-  xhr.timeout = 2000;
-  xhr.onreadystatechange = function () {
-    if (xhr.readyState === 4 && xhr.status === 200) {
-      try {
-        var remote = JSON.parse(xhr.responseText);
-        if (remote.lastUpdate > lastRemoteUpdate) {
-          lastRemoteUpdate = remote.lastUpdate;
-
-          // 1. تحديث الخانات في القائمة الجانبية أولاً (لتجنب مسحها عند استدعاء saveSettings)
-          if (remote.mosqueName !== undefined && $('mosqueName')) $('mosqueName').value = remote.mosqueName;
-          if (remote.province && $('provinceSelect')) $('provinceSelect').value = remote.province;
-          if (remote.dst && $('dstSelect')) $('dstSelect').value = remote.dst;
-          if (remote.hijriOffset !== undefined && $('hijriOffset')) $('hijriOffset').value = remote.hijriOffset;
-
-          if (remote.iqamaMinutes) {
-            if ($('iqama_fajr')) $('iqama_fajr').value = remote.iqamaMinutes.fajr;
-            if ($('iqama_dhuhr')) $('iqama_dhuhr').value = remote.iqamaMinutes.dhuhr;
-            if ($('iqama_asr')) $('iqama_asr').value = remote.iqamaMinutes.asr;
-            if ($('iqama_maghrib')) $('iqama_maghrib').value = remote.iqamaMinutes.maghrib;
-            if ($('iqama_isha')) $('iqama_isha').value = remote.iqamaMinutes.isha;
-          }
-
-          if (remote.athkarEnabled && $('athkarEnabled')) $('athkarEnabled').value = remote.athkarEnabled;
-          if (remote.athkarDuration && $('athkarDuration')) $('athkarDuration').value = remote.athkarDuration;
-
-          // 2. ضبط إعدادات الجمعة لتتطابق مع منطق الساعة الخاص بك
-          if (remote.fridaySettings) {
-            if ($('fridaySermonEnabled')) $('fridaySermonEnabled').value = remote.fridaySettings.messageEnabled;
-            if ($('fridaySermonDuration')) $('fridaySermonDuration').value = remote.fridaySettings.duration;
-          }
-
-          // 3. تطبيق وضع كتم الأذان
-          if (remote.isMuted !== undefined) {
-            isAdhanMuted = remote.isMuted;
-            var btn = $('muteAdhanBtn');
-            if (btn) {
-              btn.innerHTML = isAdhanMuted ? "وضع الكتم: مشغل (جرس) 🔔" : "وضع الكتم: معطل (أذان) 🔊";
-              btn.style.backgroundColor = isAdhanMuted ? "#840101" : "#2e7d32";
-            }
-            updateHeaderAudioIcon();
-            // حفظ إعداد الصوت الخاص
-            localStorage.setItem('MW_AUDIO_SETTINGS', JSON.stringify({ isAdhanMuted: isAdhanMuted }));
-          }
-          // أضف هذا السطر داخل دالة checkRemoteUpdate مع بقية الإعدادات
-          if (remote.bgIndex) {
-            // تحديث الخلفية في الإعدادات
-            SETTINGS.bgIndex = remote.bgIndex;
-            // تطبيق التغيير فوراً على جسم الصفحة (Body)
-            document.body.style.backgroundImage = "url('image/" + remote.bgIndex + ".jpg')";
-            // حفظ التفضيل في المتصفح
-            localStorage.setItem('SELECTED_BG_INDEX', remote.bgIndex);
-          }
-          // 4. استدعاء الحفظ (والذي سيقوم بعمل إعادة تحميل Reload لتطبيق الإعدادات فوراً)
-          saveSettings();
-          console.log("✅ تم استلام تحديث الريموت وتطبيقه بنجاح");
-        }
-      } catch (e) { console.log("JSON لم يجهز بعد أو خطأ في القراءة"); }
-    }
-  };
-  xhr.send();
-}
-
-// تشغيل الفحص كل 10 ثوانٍ
-//setInterval(checkRemoteUpdate, 10000);
 ///////////////////////////////////////////////////////////////
 // ========== نظام التحديث عبر AppCache ==========
 // تمت إزالة أي كود قديم متعلق بـ checkForUpdates
@@ -3052,5 +3317,20 @@ window.applicationCache.addEventListener('noupdate', function() {
 window.applicationCache.addEventListener('error', function() {
     setStatus('فشل التحديث، تأكد من الاتصال');
 });
+
+// ◀️ اختبار الصوت
+function testAudio() {
+  try {
+    var audio = new Audio('audio/adhan.mp3');
+    audio.volume = 1;
+    var result = audio.play();
+    if (result && typeof result.catch === 'function') {
+      result.catch(function (e) { setStatus('خطأ في الصوت: ' + e.message); });
+    }
+    setStatus('🔊 جاري اختبار الصوت...');
+  } catch (e) {
+    setStatus('فشل اختبار الصوت: ' + e.message);
+  }
+}
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////

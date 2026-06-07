@@ -361,6 +361,11 @@
 
       <button class="btn" id="muteAdhanBtn" onclick="toggleMute()" style="margin-top: 15px;">كتم صوت الاذان 🔊</button>
 
+      <button class="btn" id="testAudioBtn"
+        style="background: #ffc107; color: #000; margin-top: 10px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
+        🔊 اختبار الصوت
+      </button>
+
       <button class="btn" onclick="saveSettings()"
         style="background: #28a745; color: white; margin-top: 20px; width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 5px;">
         حفظ الإعدادات
@@ -395,7 +400,7 @@
           <div>تليفون: 01017001953</div>
         </div>
         <div class="footer-name">حقوق الطبع محفوظة لشركة اتقان</div>
-        <div class="watch-version">ver:29.04.26</div>
+        <div class="watch-version">ver:20.05.26</div>
       </div>
     </div>
   </div>
@@ -445,7 +450,7 @@
 
     <div class="prayers" id="prayerList"></div>
 
-    <div id="remaining">المتبقي للصلاة القادمة: --:--:--</div>
+    <div id="remaining"><span id="remainingText">المتبقي للصلاة القادمة: --:--:--</span><div class="pbar" id="pbar"></div></div>
 
     <div id="announcementScreen" class="announcement-screen" aria-live="polite" aria-atomic="true">
       <div class="announcement-panel">
@@ -459,6 +464,18 @@
 
 
 
+
+  <div id="prepCountdown">
+    <div class="prep-label">تجهيز</div>
+    <div class="prep-ring-container">
+      <svg class="prep-svg" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="88" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"/>
+        <circle class="prep-fg" cx="100" cy="100" r="88" fill="none" stroke="#FFD700" stroke-width="12"
+          stroke-linecap="round"/>
+      </svg>
+      <span class="prep-number" id="prepNumber">60</span>
+    </div>
+  </div>
 
   <audio id="adhanAudio" src="audio/adhan.mp3" preload="auto"></audio>
   <audio id="iqamaAudio" src="audio/iqama.mp3" preload="auto"></audio>

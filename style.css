@@ -406,7 +406,7 @@ body {
 
 .prRow:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(139, 69, 19, 0.25);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
 }
 
 .prRow .col {
@@ -435,9 +435,9 @@ body {
 
 /* تنسيق الصلاة التالية - highlight */
 .prRow.highlight {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(139, 69, 19, 0.3));
-  border: 3px solid #FFD700;
-  box-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 0 50px rgba(255, 215, 0, 0.5);
+  background: rgba(255,215,0,0.1);
+  border: 2px solid rgba(255,215,0,0.5);
+  box-shadow: 0 0 30px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.15);
   position: relative;
   z-index: 10;
 }
@@ -484,6 +484,19 @@ body {
   color: #ffffff;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.849);
   font-weight: 600;
+  position: relative;
+}
+#remaining .pbar {
+  position: absolute;
+  bottom: -8px;
+  left: 3%;
+  width: 94%;
+  height: 5px;
+  background: #FFD700;
+  border-radius: 10px;
+  transition: width 1s linear;
+  direction: ltr;
+  display: none;
 }
 
 /* شريط الأذكار المتحرك */
@@ -532,7 +545,9 @@ body {
   left: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  background: #000000 !important;
+  background: #000000;
+  background: -webkit-linear-gradient(135deg, #000000 0%, #1a1a0a 50%, #000000 100%);
+  background: linear-gradient(135deg, #000000 0%, #1a1a0a 50%, #000000 100%);
   z-index: 999999 !important;
   align-items: center;
   justify-content: center;
@@ -547,21 +562,35 @@ body {
 #overlay:not(.active) { display: none !important; }
 
 #overlay .title {
-  font-size: 12vw;
-  color: #806107 !important;
+  font-size: 15vw;
+  color: #FFD700 !important;
   font-weight: 900;
   margin: 20px 0;
   display: block;
   line-height: 1.3;
   width: 100%;
+  text-shadow: 0 0 40px rgba(255,215,0,0.5), 0 0 80px rgba(255,215,0,0.2);
+  animation: titleGlow 3s ease-in-out infinite;
+  -webkit-animation: titleGlow 3s ease-in-out infinite;
+}
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0 40px rgba(255,215,0,0.5), 0 0 80px rgba(255,215,0,0.2); }
+  50% { text-shadow: 0 0 70px rgba(255,215,0,0.9), 0 0 140px rgba(255,215,0,0.5); }
+}
+@-webkit-keyframes titleGlow {
+  0%, 100% { -webkit-text-shadow: 0 0 40px rgba(255,215,0,0.5), 0 0 80px rgba(255,215,0,0.2); }
+  50% { -webkit-text-shadow: 0 0 70px rgba(255,215,0,0.9), 0 0 140px rgba(255,215,0,0.5); }
 }
 #overlay .counter {
-  font-size: 10vw;
+  display: inline-block;
+  font-size: 7vw;
   color: #ffffff !important;
   font-weight: 900;
-  display: block;
-  line-height: 1.3;
-  width: 100%;
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 60px;
+  padding: 15px 50px;
+  background: rgba(255,215,0,0.08);
+  min-width: 200px;
 }
 @media (max-width: 768px) {
   #overlay .title { font-size: 16vw; }
@@ -639,13 +668,13 @@ body {
   color: #c09d2c;
 }
 .digit.old {
-  -webkit-animation: slideUp 0.5s ease-in-out forwards;
-  animation: slideUp 0.5s ease-in-out forwards;
+  -webkit-animation: slideUp 0.4s ease-in-out forwards;
+  animation: slideUp 0.4s ease-in-out forwards;
   z-index: 1;
 }
 .digit.new {
-  -webkit-animation: slideIn 0.5s ease-in-out forwards;
-  animation: slideIn 0.5s ease-in-out forwards;
+  -webkit-animation: slideIn 0.4s ease-in-out forwards;
+  animation: slideIn 0.4s ease-in-out forwards;
   z-index: 2;
 }
 @keyframes slideUp {
@@ -1010,23 +1039,25 @@ button[onclick="saveSettings()"] {
 /* -------------------------------- */
 /* ========== تثبيت نهائي للقائمة الجانبية ========== */
 #sideMenu {
-  width: 380px !important;          /* العرض الثابت الذي تريده (غيّره إذا أردت) */
-  max-width: 380px !important;      /* امنع أي تمدد فوق 320px */
-  min-width: 380px !important;      /* امنع أي انكماش تحت 320px */
+  width: 380px !important;
+  max-width: 380px !important;
+  min-width: 380px !important;
   height: 100vh !important;
-  overflow-x: hidden !important;    /* إخفاء أي محتوى أفقى زائد */
+  overflow-x: hidden !important;
   z-index: 9999 !important;
-  overflow-y: auto !important;      /* السماح بالتمرير الرأسي فقط */
+  overflow-y: auto !important;
   box-sizing: border-box !important;
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   background: #121212 !important;
-  border-right: 3px solid #ffd86b !important;
+  border-right: none !important;
+  border-radius: 0 24px 24px 0 !important;
+  box-shadow: 6px 0 40px rgba(0,0,0,0.6) !important;
   padding: 20px 15px !important;
   margin: 0 !important;
   transform: translateX(-100%);
-  transition: transform 0.4s ease, opacity 0.4s ease, visibility 0.4s ease;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, visibility 0.4s ease;
   opacity: 0;
   visibility: hidden;
   word-wrap: break-word;
@@ -1093,7 +1124,60 @@ button[onclick="saveSettings()"] {
 #sideMenu * {
   max-width: 100% !important;
 }
-/*************************************************/
+/* عداد 60 ثانية - حلقة مفرغة */
+#prepCountdown {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 1000000;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+#prepCountdown.active {
+  display: -webkit-flex;
+  display: flex;
+}
+#prepCountdown .prep-label {
+  color: rgba(255,215,0,0.6);
+  font-size: 3vh;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+.prep-ring-container {
+  position: relative;
+  width: 76vh;
+  height: 76vh;
+  max-width: 560px;
+  max-height: 560px;
+}
+.prep-svg {
+  width: 100%;
+  height: 100%;
+  -webkit-transform: rotate(-90deg);
+  transform: rotate(-90deg);
+}
+.prep-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  font-size: 12vh;
+  font-weight: 900;
+  color: #FFD700;
+  font-family: system-ui, sans-serif;
+  text-shadow: 0 0 30px rgba(255,215,0,0.5);
+  direction: ltr;
+}
+
 #sideMenu.fixed-menu-size {
   width: 380px !important;
   min-width: 380px !important;
